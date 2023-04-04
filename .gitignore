@@ -1,6 +1,11 @@
 # build files
-build/
+public/
 
 # environment
 node_modules/
 .vscode/
+.DS_Store
+
+# gatsby
+.cache/
+src/gatsby-types.d.ts

@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/static/css/main.ada4c42e.css",
+    "main.js": "/static/js/main.035504f8.js",
+    "static/js/787.797af462.chunk.js": "/static/js/787.797af462.chunk.js",
+    "static/media/Munro.ttf": "/static/media/Munro.a02fbd50b6ea10e107f4.ttf",
+    "index.html": "/index.html",
+    "main.ada4c42e.css.map": "/static/css/main.ada4c42e.css.map",
+    "main.035504f8.js.map": "/static/js/main.035504f8.js.map",
+    "787.797af462.chunk.js.map": "/static/js/787.797af462.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ada4c42e.css",
+    "static/js/main.035504f8.js"
+  ]
+}
