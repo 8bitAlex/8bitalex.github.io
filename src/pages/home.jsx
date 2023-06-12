@@ -3,9 +3,8 @@ import Button from "../components/Button";
 import SocialBar from "../components/SocialBar";
 import { getSound, setSound } from "../utils";
 import { StaticImage } from "gatsby-plugin-image";
-import { Link } from "gatsby-link";
 
-export default class HomeScreen extends React.Component {
+export default class Home extends React.Component {
 
     constructor(){
         super();

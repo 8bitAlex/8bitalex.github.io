@@ -2,7 +2,7 @@ import React from "react";
 import Button from "../components/Button";
 import { zoom } from "../utils";
 
-export default class PressStartScreen extends React.Component {
+export default class Index extends React.Component {
 
     constructor(props) {
         super(props)

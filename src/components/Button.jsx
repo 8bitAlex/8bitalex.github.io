@@ -1,8 +1,7 @@
 import React from "react";
-import { getSound } from "../utils";
+import { getSound, zoom } from "../utils";
 import Highlight from "../assets/sound/hightlight.mp3";
 import Select from "../assets/sound/select.mp3";
-import { Link } from "gatsby-link";
 import { StaticImage } from "gatsby-plugin-image";
 
 export default class Button extends React.Component {
@@ -21,12 +20,13 @@ export default class Button extends React.Component {
     onClick() {
         if(navigator.userActivation.hasBeenActive && getSound()) this.select.play(); 
         this.props.onClick?.();
+        zoom(this.props.href)
     }
 
     render() {
         return (
             <div className="button" {...this.props} onMouseOver={() => {this.onHover()}} onClick={() => {this.onClick()}}>
-                <Link to={this.props.href}>{this.props.children}</Link> 
+                {this.props.children}
             </div>
         );
     }
