@@ -26,14 +26,14 @@ export default class Button extends React.Component {
     render() {
         return (
             <div className="button" {...this.props} onMouseOver={() => {this.onHover()}} onClick={() => {this.onClick()}}>
-                {this.props.herf ? <Link to={this.props.href}>{this.props.children}</Link> : this.props.children}
+                <Link to={this.props.href}>{this.props.children}</Link> 
             </div>
         );
     }
 
 }
 
-//todo fix
+//todo fix this stupid gatsby bug, maybe remove StaticImage and make own
 function Image(props) {
     console.log(props.src)
     return (<StaticImage {...props} style={{...props.style, ...{width: '48px', height:'48px'}}} />)
