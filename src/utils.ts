@@ -1,3 +1,5 @@
+import { navigate } from "gatsby"
+
 const SOUND_PREF = "mt";
 
 export function setSound(soundOn: boolean) {
@@ -7,4 +9,12 @@ export function setSound(soundOn: boolean) {
 
 export function getSound() {
     return localStorage.getItem(SOUND_PREF) === 'true' ? false : true;
+}
+
+export function zoom(url: string) {
+    document.body.className = "zoom";
+        setTimeout(() => {
+            document.body.className = "";
+            navigate(url)
+    }, 500);
 }

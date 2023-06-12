@@ -1,6 +1,6 @@
 import React from "react";
 import Button from "../components/Button";
-import { navigate } from "gatsby"
+import { zoom } from "../utils";
 
 export default class PressStartScreen extends React.Component {
 
@@ -9,10 +9,7 @@ export default class PressStartScreen extends React.Component {
     }
 
     onClick() {
-        document.body.className += "zoom";
-        setTimeout(() => {
-          navigate('/home')
-        }, 500);
+        zoom('/home')
     }
 
     render() {
