@@ -1,10 +1,18 @@
 import React from "react";
 import Button from "../components/Button";
+import { navigate } from "gatsby"
 
 export default class PressStartScreen extends React.Component {
 
+    constructor(props) {
+        super(props)
+    }
+
     onClick() {
-        this.props.onClick();
+        document.body.className += "zoom";
+        setTimeout(() => {
+          navigate('/home')
+        }, 500);
     }
 
     render() {
