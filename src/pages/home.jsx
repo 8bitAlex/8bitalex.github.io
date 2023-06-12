@@ -32,8 +32,8 @@ export default class HomeScreen extends React.Component {
                 
                 <SocialBar style={lowerRight} />
                 <Button style={lowerLeft} onClick={() => this.onClick()}>
-                    { this.props.hasSound ? <StaticImage src={'../assets/img/Speaker.png'} alt={"Speaker Icon"}/> :
-                    <StaticImage src={'../assets/img/Speaker.png'} alt={"Muted Speaker Icon"}/>}
+                    { this.props.hasSound ? <StaticImage src={'../assets/img/Speaker.png'} alt={"Speaker Icon"} style={{width:'48px', height:'48px'}}/> :
+                    <StaticImage src={'../assets/img/Speaker.png'} alt={"Muted Speaker Icon"} style={{width:'48px', height:'48px'}}/>}
                 </Button>
             </div>
         );
