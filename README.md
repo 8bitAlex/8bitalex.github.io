@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/8BitAlex/8bitalex.github.io/nextjs.yml)](https://github.com/8BitAlex/8bitalex.github.io/actions)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/8BitAlex/8bitalex.github.io)
+[![GitHub License](https://img.shields.io/github/license/8bitAlex/8bitalex.github.io)](https://github.com/8BitAlex/8bitalex.github.io/blob/main/LICENSE)
 
-First, run the development server:
+</div>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+# Alex Salerno's Blog & Portfolio
+Welcome to the GitHub repository for my personal website and portfolio. This site showcases my projects, skills, experience, and acts as a central hub for my professional online presence.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+You can visit the site live at:
+https://www.alexsalerno.dev/
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This portfolio is built using:
+- React !["React Logo"](/public/img/icons/fa-react-sm.svg) : A Javascript library for building UI.
+- Typescript !["Typescript Logo"](/public/img/icons/typescript-sm.svg) : A statically typed superset of Javascript.
+- !["NextJs Logo"](/public/img/icons/next-sm.svg) : A React framework for production-ready web applications.
+- Tailwind CSS !["Tailwind CSS Logo"](/public/img/icons/tailwind-sm.svg) : A Utility-first CSS framework for styling.
+- Github Pages !["Github Logo"](/public/img/icons/github-mark-white-sm.svg) : The host of the website.
+- Github Actions !["Github Logo"](/public/img/icons/github-mark-white-sm.svg) : Automated workflows such as build, deploy, and test.
 
-## Learn More
+## Structure
 
-To learn more about Next.js, take a look at the following resources:
+- `/src` : Application code
+  - `/app` : NextJs routing and application layout.
+  - `/components` : React components used across the website.
+  - `/style` : Global styling configurations.
+- `/public` : Static assets like images and files.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To run this project locally:
 
-## Deploy on Vercel
+1. Clone the repository:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    `git clone https://github.com/8bitAlex/8bitalex.github.io.git`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Navigate into the directory:
+
+    `cd 8bitalex.github.io`
+
+3. Install dependencies:
+
+    `npm install`
+
+4. Run the development server:
+
+    `npm run dev`
+
+5. Open http://localhost:3000 to view it in your browser.
+
+## Connect with Me
+
+GitHub: https://github.com/8bitAlex
+
+LinkedIn: https://www.linkedin.com/in/8bitalex/
