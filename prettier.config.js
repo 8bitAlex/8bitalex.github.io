@@ -1,11 +1,9 @@
-import { type Options } from 'prettier'
-
-const config: Options = {
+/** @type {import('prettier').Options} */
+module.exports = {
   singleQuote: true,
   semi: false,
   plugins: ['prettier-plugin-tailwindcss'],
   tailwindStylesheet: './src/style/tailwind.css',
-  printWidth: 90
+  printWidth: 120,
+  tabWidth: 2,
 }
-
-export default config
