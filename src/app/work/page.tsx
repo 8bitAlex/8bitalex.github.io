@@ -2,24 +2,15 @@ import { type Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 
-import { QuoteBanner } from '@/blocks/QuoteBanner'
 import { Blockquote } from '@/components/Blockquote'
 import { Border } from '@/components/Border'
 import { Button } from '@/components/Button'
 import { ContactSection } from '@/components/ContactSection'
 import { Container } from '@/components/Container'
-import { FadeIn, FadeInStagger } from '@/components/FadeIn'
+import { FadeIn } from '@/components/FadeIn'
 import { PageIntro } from '@/components/PageIntro'
 import { formatDate } from '@/lib/formatDate'
 import { type CaseStudy, type MDXEntry, loadCaseStudies } from '@/lib/mdx'
-import logoBrightPath from '@public/img/clients/bright-path/logo-dark.svg'
-import logoFamilyFund from '@public/img/clients/family-fund/logo-dark.svg'
-import logoGreenLife from '@public/img/clients/green-life/logo-dark.svg'
-import logoHomeWork from '@public/img/clients/home-work/logo-dark.svg'
-import logoMailSmirk from '@public/img/clients/mail-smirk/logo-dark.svg'
-import logoNorthAdventures from '@public/img/clients/north-adventures/logo-dark.svg'
-import logoPhobia from '@public/img/clients/phobia/logo-dark.svg'
-import logoUnseal from '@public/img/clients/unseal/logo-dark.svg'
 
 function CaseStudies({
   caseStudies,
@@ -96,45 +87,45 @@ function CaseStudies({
   )
 }
 
-const clients = [
-  ['Phobia', logoPhobia],
-  ['Family Fund', logoFamilyFund],
-  ['Unseal', logoUnseal],
-  ['Mail Smirk', logoMailSmirk],
-  ['Home Work', logoHomeWork],
-  ['Green Life', logoGreenLife],
-  ['Bright Path', logoBrightPath],
-  ['North Adventures', logoNorthAdventures],
-]
+// const clients = [
+//   ['Phobia', logoPhobia],
+//   ['Family Fund', logoFamilyFund],
+//   ['Unseal', logoUnseal],
+//   ['Mail Smirk', logoMailSmirk],
+//   ['Home Work', logoHomeWork],
+//   ['Green Life', logoGreenLife],
+//   ['Bright Path', logoBrightPath],
+//   ['North Adventures', logoNorthAdventures],
+// ]
 
-function Clients() {
-  return (
-    <Container className="mt-24 sm:mt-32 lg:mt-40">
-      <FadeIn>
-        <h2 className="font-display text-2xl font-semibold text-neutral-950">
-          You&apos;re in good company
-        </h2>
-      </FadeIn>
-      <FadeInStagger className="mt-10" faster>
-        <Border as={FadeIn} />
-        <ul
-          role="list"
-          className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-3 lg:grid-cols-4"
-        >
-          {clients.map(([client, logo]) => (
-            <li key={client} className="group">
-              <FadeIn className="overflow-hidden">
-                <Border className="pt-12 group-nth-[-n+2]:-mt-px sm:group-nth-3:-mt-px lg:group-nth-4:-mt-px">
-                  <Image src={logo} alt={client} unoptimized />
-                </Border>
-              </FadeIn>
-            </li>
-          ))}
-        </ul>
-      </FadeInStagger>
-    </Container>
-  )
-}
+// function Clients() {
+//   return (
+//     <Container className="mt-24 sm:mt-32 lg:mt-40">
+//       <FadeIn>
+//         <h2 className="font-display text-2xl font-semibold text-neutral-950">
+//           You&apos;re in good company
+//         </h2>
+//       </FadeIn>
+//       <FadeInStagger className="mt-10" faster>
+//         <Border as={FadeIn} />
+//         <ul
+//           role="list"
+//           className="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-3 lg:grid-cols-4"
+//         >
+//           {clients.map(([client, logo]) => (
+//             <li key={client} className="group">
+//               <FadeIn className="overflow-hidden">
+//                 <Border className="pt-12 group-nth-[-n+2]:-mt-px sm:group-nth-3:-mt-px lg:group-nth-4:-mt-px">
+//                   <Image src={logo} alt={client} unoptimized />
+//                 </Border>
+//               </FadeIn>
+//             </li>
+//           ))}
+//         </ul>
+//       </FadeInStagger>
+//     </Container>
+//   )
+// }
 
 export const metadata: Metadata = {
   title: 'Our Work',
@@ -159,7 +150,7 @@ export default async function Work() {
       </PageIntro>
 
       <CaseStudies caseStudies={caseStudies} />
-
+      {/* 
       <QuoteBanner
         className="mt-24 sm:mt-32 lg:mt-40"
         client={{ name: 'Mail Smirk', logo: logoMailSmirk }}
@@ -168,7 +159,7 @@ export default async function Work() {
         delivered something remarkably similar in record time.
       </QuoteBanner>
 
-      <Clients />
+      <Clients /> */}
 
       <ContactSection />
     </>
