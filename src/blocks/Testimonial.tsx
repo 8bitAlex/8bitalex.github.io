@@ -21,7 +21,7 @@ export default function Testimonial(props: Props) {
         props.className,
       )}
     >
-      <figure className="grid grid-cols-1 items-center gap-x-0 gap-y-8 sm:gap-x-6 lg:gap-x-10">
+      <figure className="grid grid-cols-1 items-center gap-x-0 gap-y-4 sm:gap-x-6 lg:gap-x-10">
         <div className="relative col-span-2 sm:col-start-1 sm:row-start-2">
           <blockquote className="text-xl/8 sm:text-2xl/9">
             <p>{props.bigText}</p>

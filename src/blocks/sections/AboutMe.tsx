@@ -1,31 +1,24 @@
-import Image from 'next/image'
-
-import { Container } from '@/components/Container'
-import { FadeIn, FadeInStagger } from '@/components/FadeIn'
+import { FadeIn } from '@/components/FadeIn'
 import { faMedal } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import imageAlex from '@public/img/alex-portrait.jpg'
-import logoBrightPath from '@public/img/clients/bright-path/logo-light.svg'
-import logoFamilyFund from '@public/img/clients/family-fund/logo-light.svg'
-import logoGreenLife from '@public/img/clients/green-life/logo-light.svg'
-import logoHomeWork from '@public/img/clients/home-work/logo-light.svg'
-import logoMailSmirk from '@public/img/clients/mail-smirk/logo-light.svg'
-import logoNorthAdventures from '@public/img/clients/north-adventures/logo-light.svg'
-import logoPhobiaLight from '@public/img/clients/phobia/logo-light.svg'
-import logoUnseal from '@public/img/clients/unseal/logo-light.svg'
+import xpArmy from '@public/img/experience/CA-Army-logo.webp'
+import xpIDT from '@public/img/experience/IDT-logo-border.png'
+import xpSpawar from '@public/img/experience/SPAWAR-logo-border.gif'
+import xpWorkday from '@public/img/experience/workday-reverse.svg'
+import skillAgile from '@public/img/skills/skill-agile-light.svg'
+import skillAPI from '@public/img/skills/skill-api-light.svg'
+import skillCloud from '@public/img/skills/skill-cloud-light.svg'
+import skillDistributed from '@public/img/skills/skill-dist-light.svg'
+import skillGraphQL from '@public/img/skills/skill-graphql-light.png'
+import skillJava from '@public/img/skills/skill-java-light.svg'
+import skillNode from '@public/img/skills/skill-node-light-2.svg'
+import skillReact from '@public/img/skills/skill-react-light.svg'
+import skillScala from '@public/img/skills/skill-scala-light.svg'
+import skillTypescript from '@public/img/skills/skill-typescript-light.svg'
 import Testimonial from '../Testimonial'
 import { SectionHeader } from './SectionHeader'
-
-const clients = [
-  ['Phobia', logoPhobiaLight],
-  ['Family Fund', logoFamilyFund],
-  ['Unseal', logoUnseal],
-  ['Mail Smirk', logoMailSmirk],
-  ['Home Work', logoHomeWork],
-  ['Green Life', logoGreenLife],
-  ['Bright Path', logoBrightPath],
-  ['North Adventures', logoNorthAdventures],
-]
+import ShowcaseList from './ShowcaseList'
 
 const aboutMeText =
   'Award-winning Software Engineer with 10+ years of experience in distributed systems, API frameworks, and full-stack application development.'
@@ -35,6 +28,26 @@ const vetBadge = (
     <FontAwesomeIcon className="mr-2 h-4" icon={faMedal} /> Veteran
   </div>
 )
+
+const skills = [
+  ['Java', skillJava],
+  ['Scala', skillScala],
+  ['Typescript', skillTypescript],
+  ['GraphQL', skillGraphQL],
+  ['React', skillReact],
+  ['Node.js', skillNode],
+  ['Cloud Computing', skillCloud],
+  ['Distributed Systems', skillDistributed],
+  ['API Frameworks', skillAPI],
+  ['Agile Leadership', skillAgile],
+]
+
+const experience = [
+  ['Workday', xpWorkday],
+  ['California Army National Guard', xpArmy],
+  ['Innovative Defense Technologies', xpIDT],
+  ['SPAWAR', xpSpawar],
+]
 
 export function AboutMe() {
   return (
@@ -49,28 +62,19 @@ export function AboutMe() {
           subtext={vetBadge}
         />
       </FadeIn>
-      <Container className="mt-8">
-        <FadeIn className="flex items-center gap-x-8">
-          <h2 className="text-center font-display text-sm font-semibold tracking-wider text-white sm:text-left">
-            Skills & Technology
-          </h2>
-          <div className="h-px flex-auto bg-neutral-800" />
-        </FadeIn>
-        <FadeInStagger faster>
-          <ul
-            role="list"
-            className="mt-10 grid grid-cols-2 gap-x-8 gap-y-10 lg:grid-cols-4"
-          >
-            {clients.map(([client, logo]) => (
-              <li key={client}>
-                <FadeIn>
-                  <Image src={logo} alt={client} unoptimized />
-                </FadeIn>
-              </li>
-            ))}
-          </ul>
-        </FadeInStagger>
-      </Container>
+      <ShowcaseList
+        name="Skills & Technology"
+        items={skills}
+        className="md:mt-16"
+        lgCol={5}
+      />
+      <ShowcaseList
+        name="Experience"
+        items={experience}
+        className="md:mt-16"
+        align="center"
+        height={128}
+      />
     </div>
   )
 }
