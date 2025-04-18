@@ -26,7 +26,9 @@ This portfolio is built using:
 
 - `/src` : Application code
   - `/app` : NextJs routing and application layout.
-  - `/components` : React components used across the website.
+  - `/blocks` : React UI Elements.
+  - `/components` : Reusable React components used across the website.
+  - `/lib` : Shared utility functions, helpers, and modules.
   - `/style` : Global styling configurations.
 - `/public` : Static assets like images and files.
 
