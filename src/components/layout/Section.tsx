@@ -17,7 +17,7 @@ export default function Section({
   return (
     <section className={className}>
       <SectionHeader title={title ? title : ''} description={description} invert={invert} />
-      <Container>
+      <Container className="mt-8">
         <div>{children}</div>
       </Container>
     </section>

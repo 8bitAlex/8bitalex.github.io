@@ -1,9 +1,7 @@
 import { type Metadata } from 'next'
 
 import { AboutMe } from '@/blocks/sections/AboutMe'
-import FeaturedPosts from '@/blocks/sections/FeaturedPosts'
 import HeroBanner from '@/blocks/sections/HeroBanner'
-import Projects from '@/blocks/sections/Projects'
 import { loadArticles } from '@/lib/mdx'
 
 export const metadata: Metadata = {
@@ -19,7 +17,7 @@ export default async function Home() {
 
       <AboutMe />
 
-      {posts.length > 0 ? <FeaturedPosts posts={posts} /> : null}
+      {/* {posts.length > 0 ? <FeaturedPosts posts={posts} /> : null} */}
 
       {/* <QuoteBanner
         className="mt-24 sm:mt-32 lg:mt-40"
@@ -30,7 +28,7 @@ export default async function Home() {
         one of those annoying permission dialogs.
       </QuoteBanner> */}
 
-      <Projects />
+      {/* <Projects /> */}
     </>
   )
 }

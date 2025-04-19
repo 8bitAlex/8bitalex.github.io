@@ -12,7 +12,7 @@ export default function FeaturedPosts({ posts }: { posts: Array<MDXEntry<Post>> 
       title="Featured Posts"
       description='"Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away." - Antoine de Saint-Exupéry'
     >
-      <FadeInStagger className={`grid grid-cols-1 gap-8 lg:grid-cols-${cols} mt-8`}>
+      <FadeInStagger className={`grid grid-cols-1 gap-8 lg:grid-cols-${cols}`}>
         {posts.map((post) => (
           <FadeIn key={post.href} className="flex">
             <article className="relative flex w-full flex-col rounded-3xl p-6 ring-1 ring-neutral-950/5 transition hover:bg-neutral-50 sm:p-8">
