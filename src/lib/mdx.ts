@@ -1,3 +1,6 @@
+import { IconProp } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIconProps } from '@fortawesome/react-fontawesome'
+import AlexPhoto from '@public/img/alex-portrait.jpg'
 import glob from 'fast-glob'
 import { type ImageProps } from 'next/image'
 
@@ -7,18 +10,14 @@ async function loadEntries<T extends { date: string }>(
 ): Promise<Array<MDXEntry<T>>> {
   return (
     await Promise.all(
-      (await glob('**/page.mdx', { cwd: `src/app/${directory}` })).map(
-        async (filename) => {
-          const metadata = (await import(`../app/${directory}/${filename}`))[
-            metaName
-          ] as T
-          return {
-            ...metadata,
-            metadata,
-            href: `/${directory}/${filename.replace(/\/page\.mdx$/, '')}`,
-          }
-        },
-      ),
+      (await glob('**/page.mdx', { cwd: `src/app/${directory}` })).map(async (filename) => {
+        const metadata = (await import(`../app/${directory}/${filename}`))[metaName] as T
+        return {
+          ...metadata,
+          metadata,
+          href: `/${directory}/${filename.replace(/\/page\.mdx$/, '')}`,
+        }
+      }),
     )
   ).sort((a, b) => b.date.localeCompare(a.date))
 }
@@ -27,25 +26,25 @@ type ImagePropsWithOptionalAlt = Omit<ImageProps, 'alt'> & { alt?: string }
 
 export type MDXEntry<T> = T & { href: string; metadata: T }
 
-export interface Article {
+export interface Post {
   date: string
   title: string
   description: string
+  tag: string
+  icon: IconProp | FontAwesomeIconProps['icon']
+  image: ImagePropsWithOptionalAlt
+}
+
+export interface Article extends Post {
   author: {
     name: string
-    role: string
     image: ImagePropsWithOptionalAlt
   }
 }
 
-export interface CaseStudy {
-  date: string
+export interface CaseStudy extends Post {
   client: string
-  title: string
-  description: string
   summary: Array<string>
-  logo: ImageProps['src']
-  image: ImagePropsWithOptionalAlt
   service: string
   testimonial: {
     author: {
@@ -54,6 +53,17 @@ export interface CaseStudy {
     }
     content: string
   }
+}
+
+export const BlogPost = {
+  tag: 'Article',
+  author: {
+    name: 'Alex Salerno',
+    image: {
+      src: AlexPhoto,
+      alt: 'Alex Salerno Portrait',
+    },
+  },
 }
 
 export function loadArticles() {

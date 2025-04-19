@@ -13,6 +13,8 @@ type Props = {
 }
 
 export default function ShowcaseList(props: Props) {
+  const cols = props.lgCol ? `lg:grid-cols-${props.lgCol.toString()}` : 'lg:grid-cols-4'
+
   return (
     <Container className={clsx('mt-8', props.className)}>
       <FadeIn className="flex items-center gap-x-8">
@@ -25,10 +27,7 @@ export default function ShowcaseList(props: Props) {
         <ul
           role="list"
           className={
-            'mt-10 grid grid-cols-2 items-center gap-x-8 gap-y-10' +
-            (props.lgCol
-              ? ` lg:grid-cols-${props.lgCol.toString()}`
-              : ' lg:grid-cols-4') +
+            `mt-10 grid grid-cols-2 items-center gap-x-8 gap-y-10 ${cols}` +
             (props.align ? ` justify-items-${props.align}` : '')
           }
         >

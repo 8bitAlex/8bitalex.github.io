@@ -62,19 +62,8 @@ export function AboutMe() {
           subtext={vetBadge}
         />
       </FadeIn>
-      <ShowcaseList
-        name="Skills & Technology"
-        items={skills}
-        className="md:mt-16"
-        lgCol={5}
-      />
-      <ShowcaseList
-        name="Experience"
-        items={experience}
-        className="md:mt-16"
-        align="center"
-        height={128}
-      />
+      <ShowcaseList name="Skills & Technology" items={skills} className="md:mt-22" lgCol={5} />
+      <ShowcaseList name="Experience" items={experience} className="mb-8 md:mt-22" align="center" height={128} />
     </div>
   )
 }

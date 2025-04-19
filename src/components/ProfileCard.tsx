@@ -13,12 +13,7 @@ type Props = {
 
 export default function ProfileCard(props: Props) {
   return (
-    <div
-      className={clsx(
-        'group relative overflow-hidden rounded-3xl bg-neutral-100',
-        props.className,
-      )}
-    >
+    <div className={clsx('group relative overflow-hidden rounded-3xl bg-neutral-100', props.className)}>
       <Image
         alt=""
         {...props.image}
@@ -30,10 +25,8 @@ export default function ProfileCard(props: Props) {
           props.textClassName,
         )}
       >
-        <p className="font-display text-base/6 font-semibold tracking-wide text-white">
-          {props.name}
-        </p>
-        <p className="mt-2 text-sm text-white">{props.subtext}</p>
+        <div className="font-display text-base/6 font-semibold tracking-wide text-white">{props.name}</div>
+        <div className="mt-2 text-sm text-white">{props.subtext}</div>
       </div>
     </div>
   )

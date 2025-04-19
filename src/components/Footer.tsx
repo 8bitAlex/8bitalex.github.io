@@ -4,6 +4,8 @@ import { FadeIn } from '@/components/FadeIn'
 import { Container } from '@/components/layout/Container'
 import { Logo } from '@/components/Logo'
 import { socialMediaProfiles } from '@/components/SocialMedia'
+import imageNotAI from '@public/img/Developed-By-Human-Not-By-AI-Badge-black.svg'
+import Image from 'next/image'
 
 const navigation = [
   {
@@ -43,16 +45,11 @@ function Navigation() {
       <ul role="list" className="grid grid-cols-2 gap-8 sm:grid-cols-3">
         {navigation.map((section, sectionIndex) => (
           <li key={sectionIndex}>
-            <div className="font-display text-sm font-semibold tracking-wider text-neutral-950">
-              {section.title}
-            </div>
+            <div className="font-display text-sm font-semibold tracking-wider text-neutral-950">{section.title}</div>
             <ul role="list" className="mt-4 text-sm text-neutral-700">
               {section.links.map((link, linkIndex) => (
                 <li key={linkIndex} className="mt-4">
-                  <Link
-                    href={link.href}
-                    className="transition hover:text-neutral-950"
-                  >
+                  <Link href={link.href} className="transition hover:text-neutral-950">
                     {link.title}
                   </Link>
                 </li>
@@ -68,12 +65,7 @@ function Navigation() {
 function ArrowIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
   return (
     <svg viewBox="0 0 16 6" aria-hidden="true" {...props}>
-      <path
-        fill="currentColor"
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M16 3 10 .5v2H0v1h10v2L16 3Z"
-      />
+      <path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M16 3 10 .5v2H0v1h10v2L16 3Z" />
     </svg>
   )
 }
@@ -81,12 +73,9 @@ function ArrowIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
 function NewsletterForm() {
   return (
     <form className="max-w-sm">
-      <h2 className="font-display text-sm font-semibold tracking-wider text-neutral-950">
-        Sign up for our newsletter
-      </h2>
+      <h2 className="font-display text-sm font-semibold tracking-wider text-neutral-950">Sign up for our newsletter</h2>
       <p className="mt-4 text-sm text-neutral-700">
-        Subscribe to get the latest design news, articles, resources and
-        inspiration.
+        Subscribe to get the latest design news, articles, resources and inspiration.
       </p>
       <div className="relative mt-6">
         <input
@@ -121,12 +110,13 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-24 mb-20 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-t border-neutral-950/10 pt-12">
-          <Link href="/" aria-label="Home">
-            <Logo className="h-8" fillOnHover />
-          </Link>
-          <p className="text-sm text-neutral-700">
-            © Studio Agency Inc. {new Date().getFullYear()}
-          </p>
+          <div className="flex">
+            <Link href="/" aria-label="Home">
+              <Logo className="h-8" fillOnHover />
+            </Link>
+            <Image src={imageNotAI} alt="Developed by human, not by AI" className="ml-4 h-8" />
+          </div>
+          <p className="text-sm text-neutral-700">© Alex Salerno {new Date().getFullYear()}</p>
         </div>
       </FadeIn>
     </Container>

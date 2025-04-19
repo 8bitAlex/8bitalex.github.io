@@ -1,15 +1,12 @@
+import { BlogPost } from '@/lib/mdx.ts'
 import imageAngelaFisher from '@public/img/team/angela-fisher.jpg'
 
 export const article = {
+  ...BlogPost,
   date: '2022-12-01',
   title: 'A Short Guide to Component Naming',
   description:
     "As a developer, the most important aspect of your job is naming components. It's not just about being descriptive and clear, but also about having fun and being creative.",
-  author: {
-    name: 'Angela Fisher',
-    role: 'Front-end Developer',
-    image: { src: imageAngelaFisher },
-  },
 }
 
 export const metadata = {

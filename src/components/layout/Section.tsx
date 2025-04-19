@@ -5,16 +5,18 @@ export default function Section({
   children,
   className,
   title,
+  description,
   invert,
 }: {
   children: React.ReactNode
   className?: string
   title?: string
+  description?: string
   invert?: boolean
 }) {
   return (
     <section className={className}>
-      <SectionHeader title={title ? title : ''} invert={invert} />
+      <SectionHeader title={title ? title : ''} description={description} invert={invert} />
       <Container>
         <div>{children}</div>
       </Container>
