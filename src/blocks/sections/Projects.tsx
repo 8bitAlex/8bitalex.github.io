@@ -1,6 +1,6 @@
 import { SectionHeader } from '@/blocks/sections/SectionHeader'
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 import { List, ListItem } from '@/components/List'
 import { StylizedImage } from '@/components/StylizedImage'
 import imageLaptop from '@public/img/laptop.jpg'

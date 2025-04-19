@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 import { Logo } from '@/components/Logo'
 import { socialMediaProfiles } from '@/components/SocialMedia'
 

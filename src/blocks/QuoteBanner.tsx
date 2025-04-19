@@ -1,9 +1,9 @@
 import clsx from 'clsx'
 import Image, { type ImageProps } from 'next/image'
 
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
 import { GridPattern } from '@/components/GridPattern'
+import { Container } from '@/components/layout/Container'
 
 export function QuoteBanner({
   children,

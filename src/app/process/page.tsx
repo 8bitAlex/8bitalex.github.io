@@ -2,10 +2,10 @@ import { type Metadata } from 'next'
 
 import { Blockquote } from '@/components/Blockquote'
 import { ContactSection } from '@/components/ContactSection'
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
 import { GridList, GridListItem } from '@/components/GridList'
 import { GridPattern } from '@/components/GridPattern'
+import { Container } from '@/components/layout/Container'
 import { List, ListItem } from '@/components/List'
 import { PageIntro } from '@/components/PageIntro'
 import { SectionIntro } from '@/components/SectionIntro'
@@ -64,10 +64,10 @@ function Discover() {
           what makes their business tick.
         </p>
         <p>
-          Our team of private investigators shadow the company director&apos;s for
-          several weeks while our account managers focus on going through their
-          trash. Our senior security experts then perform social engineering
-          hacks to gain access to their{' '}
+          Our team of private investigators shadow the company director&apos;s
+          for several weeks while our account managers focus on going through
+          their trash. Our senior security experts then perform social
+          engineering hacks to gain access to their{' '}
           <strong className="font-semibold text-neutral-950">business</strong>{' '}
           accounts — handing that information over to our forensic accounting
           team.
@@ -107,9 +107,9 @@ function Build() {
         <p>
           Each client is assigned a key account manager to keep lines of
           communication open and obscure the actual progress of the project.
-          They act as a buffer between the client&apos;s incessant nagging and the
-          development team who are hard at work scouring open source projects
-          for code to re-purpose.
+          They act as a buffer between the client&apos;s incessant nagging and
+          the development team who are hard at work scouring open source
+          projects for code to re-purpose.
         </p>
         <p>
           Our account managers are trained to only reply to client emails after

@@ -1,7 +1,7 @@
 import { ContactSection } from '@/components/ContactSection'
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
 import { GrayscaleTransitionImage } from '@/components/GrayscaleTransitionImage'
+import { Container } from '@/components/layout/Container'
 import { MDXComponents } from '@/components/MDXComponents'
 import { PageIntro } from '@/components/PageIntro'
 import { PageLinks } from '@/components/PageLinks'

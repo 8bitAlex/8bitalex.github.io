@@ -14,10 +14,11 @@ export function SectionHeader(props: Props) {
     <SectionIntro
       eyebrow={props.eyebrow}
       title={props.title}
-      className={clsx('mt-24 sm:mt-32 lg:mt-40', props.className)}
+      className={clsx('mt-24', props.className)}
       invert={props.invert}
     >
       <p>{props.description}</p>
     </SectionIntro>
   )
 }
+//mt-24 sm:mt-32 lg:mt-40

@@ -14,9 +14,9 @@ import {
 } from 'react'
 
 import { Button } from '@/components/Button'
-import { Container } from '@/components/Container'
 import { Footer } from '@/components/Footer'
 import { GridPattern } from '@/components/GridPattern'
+import { Container } from '@/components/layout/Container'
 import { Logo, Logomark } from '@/components/Logo'
 import { Offices } from '@/components/Offices'
 import { SocialMedia } from '@/components/SocialMedia'

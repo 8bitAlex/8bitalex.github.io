@@ -1,5 +1,5 @@
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 
 export default function HeroBanner() {
   return (

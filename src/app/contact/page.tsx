@@ -4,8 +4,8 @@ import { useId } from 'react'
 
 import { Border } from '@/components/Border'
 import { Button } from '@/components/Button'
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 import { Offices } from '@/components/Offices'
 import { PageIntro } from '@/components/PageIntro'
 import { SocialMedia } from '@/components/SocialMedia'
@@ -142,13 +142,13 @@ function ContactDetails() {
 
 export const metadata: Metadata = {
   title: 'Contact Us',
-  description: "Let&apos;s work together. We can&apos;t wait to hear from you.",
+  description: 'Let&apos;s work together. We can&apos;t wait to hear from you.',
 }
 
 export default function Contact() {
   return (
     <>
-      <PageIntro eyebrow="Contact us" title="Let&apos;s work together">
+      <PageIntro eyebrow="Contact us" title="Let's work together">
         <p>We can&apos;t wait to hear from you.</p>
       </PageIntro>
 

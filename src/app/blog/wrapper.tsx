@@ -1,6 +1,6 @@
 import { ContactSection } from '@/components/ContactSection'
-import { Container } from '@/components/Container'
 import { FadeIn } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 import { MDXComponents } from '@/components/MDXComponents'
 import { PageLinks } from '@/components/PageLinks'
 import { formatDate } from '@/lib/formatDate'

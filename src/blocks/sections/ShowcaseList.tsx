@@ -1,5 +1,5 @@
-import { Container } from '@/components/Container'
 import { FadeIn, FadeInStagger } from '@/components/FadeIn'
+import { Container } from '@/components/layout/Container'
 import clsx from 'clsx'
 import Image from 'next/image'
 
@@ -26,7 +26,9 @@ export default function ShowcaseList(props: Props) {
           role="list"
           className={
             'mt-10 grid grid-cols-2 items-center gap-x-8 gap-y-10' +
-            (props.lgCol ? ` lg:grid-cols-${props.lgCol}` : ' lg:grid-cols-4') +
+            (props.lgCol
+              ? ` lg:grid-cols-${props.lgCol.toString()}`
+              : ' lg:grid-cols-4') +
             (props.align ? ` justify-items-${props.align}` : '')
           }
         >

@@ -3,13 +3,14 @@ import Image from 'next/image'
 
 import { Border } from '@/components/Border'
 import { ContactSection } from '@/components/ContactSection'
-import { Container } from '@/components/Container'
 import { FadeIn, FadeInStagger } from '@/components/FadeIn'
 import { GridList, GridListItem } from '@/components/GridList'
+import { Container } from '@/components/layout/Container'
 import { PageIntro } from '@/components/PageIntro'
 import { PageLinks } from '@/components/PageLinks'
 import { SectionIntro } from '@/components/SectionIntro'
 import { StatList, StatListItem } from '@/components/StatList'
+import { loadArticles } from '@/lib/mdx'
 import imageAngelaFisher from '@public/img/team/angela-fisher.jpg'
 import imageBenjaminRussel from '@public/img/team/benjamin-russel.jpg'
 import imageBlakeReid from '@public/img/team/blake-reid.jpg'
@@ -22,7 +23,6 @@ import imageLeonardKrasner from '@public/img/team/leonard-krasner.jpg'
 import imageLeslieAlexander from '@public/img/team/leslie-alexander.jpg'
 import imageMichaelFoster from '@public/img/team/michael-foster.jpg'
 import imageWhitneyFrancis from '@public/img/team/whitney-francis.jpg'
-import { loadArticles } from '@/lib/mdx'
 
 function Culture() {
   return (
@@ -43,8 +43,8 @@ function Culture() {
             are allowed to have LinkedIn profiles.
           </GridListItem>
           <GridListItem title="Trust" invert>
-            We don&apos;t care when our team works just as long as they are working
-            every waking second.
+            We don&apos;t care when our team works just as long as they are
+            working every waking second.
           </GridListItem>
           <GridListItem title="Compassion" invert>
             You never know what someone is going through at home and we make
@@ -202,10 +202,11 @@ export default async function About() {
             differently by charging triple instead.
           </p>
           <p>
-            At Studio, we&apos;re more than just colleagues — we&apos;re a family. This
-            means we pay very little and expect people to work late. We want our
-            employees to bring their whole selves to work. In return, we just
-            ask that they keep themselves there until at least 6:30pm.
+            At Studio, we&apos;re more than just colleagues — we&apos;re a
+            family. This means we pay very little and expect people to work
+            late. We want our employees to bring their whole selves to work. In
+            return, we just ask that they keep themselves there until at least
+            6:30pm.
           </p>
         </div>
       </PageIntro>
