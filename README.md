@@ -1,4 +1,3 @@
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/8BitAlex/8bitalex.github.io/nextjs.yml)](https://github.com/8BitAlex/8bitalex.github.io/actions)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/8BitAlex/8bitalex.github.io)
 [![GitHub License](https://img.shields.io/github/license/8bitAlex/8bitalex.github.io)](https://github.com/8BitAlex/8bitalex.github.io/blob/main/LICENSE)
 
