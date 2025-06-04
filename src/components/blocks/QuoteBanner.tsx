@@ -8,10 +8,10 @@ import { Container } from '@/components/layout/Container'
 export function QuoteBanner({
   children,
   client,
-  className,
+  className
 }: {
   children: React.ReactNode
-  client: { logo: ImageProps['src']; name: string }
+  client?: { logo: ImageProps['src']; name: string }
   className?: string
 }) {
   return (
@@ -29,7 +29,7 @@ export function QuoteBanner({
               </p>
             </blockquote>
             <figcaption className="mt-10">
-              <Image src={client.logo} alt={client.name} unoptimized />
+              {client && <Image src={client.logo} alt={client.name} unoptimized />}
             </figcaption>
           </figure>
         </FadeIn>

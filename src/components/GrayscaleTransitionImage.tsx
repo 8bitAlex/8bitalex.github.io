@@ -7,12 +7,12 @@ import { useRef } from 'react'
 const MotionImage = motion(Image)
 
 export function GrayscaleTransitionImage(
-  props: Pick<ImageProps, 'src' | 'quality' | 'className' | 'sizes' | 'priority'> & { alt?: string },
+  props: Pick<ImageProps, 'src' | 'quality' | 'className' | 'sizes' | 'priority' | 'style'> & { alt?: string }
 ) {
   const ref = useRef<React.ElementRef<'div'>>(null)
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ['start 65%', 'end 35%'],
+    offset: ['start 65%', 'end 35%']
   })
   const grayscale = useTransform(scrollYProgress, [0, 0.5, 1], [1, 0, 1])
   const filter = useMotionTemplate`grayscale(${grayscale})`

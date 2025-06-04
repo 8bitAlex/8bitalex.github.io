@@ -40,41 +40,41 @@ const skills = [
   ['Cloud Computing', skillCloud],
   ['Distributed Systems', skillDistributed],
   ['API Frameworks', skillAPI],
-  ['Agile Leadership', skillAgile],
+  ['Agile Leadership', skillAgile]
 ]
 
 const experience = [
   ['Workday', xpWorkday],
   ['California Army National Guard', xpArmy],
   ['Innovative Defense Technologies', xpIDT],
-  ['SPAWAR', xpSpawar],
+  ['SPAWAR', xpSpawar]
 ]
 
 const values = [
   {
     title: 'Attention to Detail',
-    text: 'I believe in the importance of details. I strive to ensure that every aspect of my work is polished and precise, from code quality to documentation to user experience, to deliver the best possible product.',
+    text: 'I believe in the importance of details. I strive to ensure that every aspect of my work is polished and precise, from code quality to documentation to user experience, to deliver the best possible product.'
   },
   {
     title: 'Clean Maintainable Code',
-    text: 'I believe in writing clean, maintainable code. Keeping solutions clear, readable, and organized to ensure others can easily understand, extend, and adapt software now and in the future.',
+    text: 'I believe in writing clean, maintainable code. Keeping solutions clear, readable, and organized to ensure others can easily understand, extend, and adapt software now and in the future.'
   },
   {
     title: 'Refactor Mercilessly',
-    text: 'I believe in improving code without hesitation. Simplifying structure, removing duplication, and enhancing clarity to keep the software easy to maintain, flexible, and reliable over time.',
+    text: 'I believe in improving code without hesitation. Simplifying structure, removing duplication, and enhancing clarity to keep the software easy to maintain, flexible, and reliable over time.'
   },
   {
     title: 'Simplicity',
-    text: 'I believe in the power of simplicity. I strive to create solutions that are straightforward and easy to understand, avoiding unnecessary complexity to enhance usability and maintainability.',
+    text: 'I believe in the power of simplicity. I strive to create solutions that are straightforward and easy to understand, avoiding unnecessary complexity to enhance usability and maintainability.'
   },
   {
     title: 'Beginners Mindset',
-    text: 'I believe in the power of a beginner’s mindset. I approach every challenge with curiosity and openness, ready to learn and adapt, and I encourage others to do the same.',
+    text: 'I believe in the power of a beginner’s mindset. I approach every challenge with curiosity and openness, ready to learn and adapt, and I encourage others to do the same.'
   },
   {
     title: 'Continuous Improvement',
-    text: 'I believe in the value of continuous improvement. I strive to learn from every experience, seeking feedback and opportunities for growth to enhance my skills and the quality of my work.',
-  },
+    text: 'I believe in the value of continuous improvement. I strive to learn from every experience, seeking feedback and opportunities for growth to enhance my skills and the quality of my work.'
+  }
 ]
 
 export function AboutMe() {
@@ -91,7 +91,7 @@ export function AboutMe() {
         />
       </FadeIn>
       <ShowcaseList name="Skills & Technology" items={skills} className="mb-8 md:mt-22" wide />
-      <ShowcaseList name="Experience" items={experience} className="mb-8 md:mt-22" align="center" height={128} />
+      <ShowcaseList name="Experience" items={experience} className="mb-8 md:mt-22" center height={128} />
       <TextGridList title="Values" items={values} invert className="mb-8 md:mt-22" />
     </div>
   )

@@ -23,6 +23,18 @@ function NavigationItem({ href, children }: { href: string; children: React.Reac
   )
 }
 
+const Navigation = [{ href: '/projects', label: 'Projects' }]
+
 export function NavigationBar() {
-  return <nav className="mt-px font-display text-5xl font-medium tracking-tight text-white"></nav>
+  return (
+    <nav className="mt-px font-display text-5xl font-medium tracking-tight text-white">
+      <NavigationRow>
+        {Navigation.map((item) => (
+          <NavigationItem key={item.href} href={item.href}>
+            {item.label}
+          </NavigationItem>
+        ))}
+      </NavigationRow>
+    </nav>
+  )
 }

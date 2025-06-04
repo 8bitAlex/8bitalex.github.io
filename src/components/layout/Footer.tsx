@@ -10,8 +10,26 @@ import Image from 'next/image'
 const navigation = [
   {
     title: 'Site Map',
-    links: [{ title: 'Home', href: '/' }],
+    links: [
+      { title: 'Home', href: '/' },
+      { title: 'Projects', href: '/projects' }
+    ]
   },
+  {
+    title: 'Projects',
+    links: [
+      { title: 'This Website', href: '/projects/website' },
+      { title: 'Pixelated Realms Podcast', href: '/projects/pixelated-realms' },
+      {
+        title: (
+          <>
+            See all <span aria-hidden="true">&rarr;</span>
+          </>
+        ),
+        href: '/projects'
+      }
+    ]
+  }
 ]
 
 function Navigation() {

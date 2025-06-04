@@ -8,7 +8,7 @@ type Props = {
   name?: string | React.ReactNode
   items: any[][]
   className?: string
-  align?: 'start' | 'center' | 'end'
+  center?: boolean
   height?: number
   wide?: boolean
 }
@@ -24,8 +24,8 @@ export default function ShowcaseList(props: Props) {
           role="list"
           className={clsx(
             'mt-10 grid grid-cols-2 items-center gap-x-8 gap-y-10',
-            props.align ? ` justify-items-${props.align}` : '',
-            props.wide ? `lg:grid-cols-5` : 'lg:grid-cols-4',
+            props.center && 'justify-items-center',
+            props.wide ? `lg:grid-cols-5` : 'lg:grid-cols-4'
           )}
         >
           {props.items.map(([name, icon]) => (

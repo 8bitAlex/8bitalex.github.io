@@ -1,4 +1,4 @@
-import { SectionIntro } from '@/components/layout/SectionIntro'
+import { SectionIntro } from '@/components/SectionIntro'
 import clsx from 'clsx'
 
 type SectionHeaderProps = {

@@ -7,7 +7,7 @@ export default function Section({
   title,
   description,
   eyebrow,
-  invert,
+  invert
 }: {
   children: React.ReactNode
   className?: string
@@ -19,7 +19,7 @@ export default function Section({
   return (
     <section className={className}>
       <SectionHeader title={title ? title : ''} description={description} invert={invert} eyebrow={eyebrow} />
-      <Container className="mt-8">
+      <Container className="mb-8">
         <div>{children}</div>
       </Container>
     </section>
