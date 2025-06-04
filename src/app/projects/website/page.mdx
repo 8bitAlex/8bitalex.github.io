@@ -1,0 +1,35 @@
+import image from './website.png'
+
+export const project = {
+  order: 1,
+  title: 'This Website',
+  description:
+    'My personal website that showcases my projects, skills, experience, and acts as a central hub for my professional online presence.',
+  abstract: (
+    <div>
+      <p>
+        My personal website that showcases my projects, skills, experience, and acts as a central hub for my
+        professional online presence.
+      </p>
+      <br />
+      <p>
+        Built using TypeScript, Tailwind CSS, React, and Next.js — among a few other things. It's open-source and hosted
+        on Cloudflare Pages.
+      </p>
+    </div>
+  ),
+  startDate: '2025-5-1',
+  date: '2025-5-18',
+  image: image,
+  href: '/projects/website',
+  repo: 'https://github.com/8bitAlex/8bitalex.github.io',
+  website: 'https://www.alexsalerno.dev',
+  status: 'Ongoing',
+  type: 'Web Development',
+  tags: ['Web App', 'Typescript', 'Open-Source']
+}
+
+export const metadata = {
+  title: project.title,
+  description: project.description
+}

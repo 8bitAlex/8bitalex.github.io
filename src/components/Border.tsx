@@ -13,7 +13,8 @@ export function Border<T extends React.ElementType = 'div'>({
   position = 'top',
   invert = false,
   ...props
-}: Omit<React.ComponentPropsWithoutRef<T>, keyof BorderProps<T>> & BorderProps<T>) {
+}: Omit<React.ComponentPropsWithoutRef<T>, keyof BorderProps<T>> &
+  BorderProps<T>) {
   const Component = as ?? 'div'
 
   return (
@@ -21,7 +22,9 @@ export function Border<T extends React.ElementType = 'div'>({
       className={clsx(
         className,
         'relative before:absolute after:absolute',
-        invert ? 'before:bg-white after:bg-white/10' : 'before:bg-neutral-950 after:bg-neutral-950/10',
+        invert
+          ? 'before:bg-white after:bg-white/10'
+          : 'before:bg-neutral-950 after:bg-neutral-950/10',
         position === 'top' &&
           'before:top-0 before:left-0 before:h-px before:w-6 after:top-0 after:right-0 after:left-8 after:h-px',
         position === 'left' &&

@@ -6,4 +6,5 @@ module.exports = {
   tailwindStylesheet: './src/style/tailwind.css',
   printWidth: 120,
   tabWidth: 2,
+  trailingComma: 'none'
 }

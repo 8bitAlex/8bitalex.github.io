@@ -10,7 +10,8 @@ export function Container<T extends React.ElementType = 'div'>({
   as,
   className,
   children,
-}: Omit<React.ComponentPropsWithoutRef<T>, keyof ContainerProps<T>> & ContainerProps<T>) {
+}: Omit<React.ComponentPropsWithoutRef<T>, keyof ContainerProps<T>> &
+  ContainerProps<T>) {
   const Component = as ?? 'div'
 
   return (
