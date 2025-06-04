@@ -1,9 +1,10 @@
 'use client'
 
+import { sendGAEvent } from '@next/third-parties/google'
 import clsx from 'clsx'
 import Link from 'next/link'
-import { sendGAEvent } from '@next/third-parties/google'
 import { usePathname } from 'next/navigation'
+import React from 'react'
 
 type ButtonProps = {
   invert?: boolean
@@ -38,6 +39,6 @@ export function Button({ invert = false, className, children, ...props }: Button
 }
 
 function handleClick(props: ButtonProps, pathname: string) {
-  const label = React.Children.toArray(props.children).join('');
-  sendGAEvent('event', 'button_click', { source: pathname, href: props.href, label });
+  const label = React.Children.toArray(props.children).join('')
+  sendGAEvent('event', 'button_click', { source: pathname, href: props.href, label })
 }
