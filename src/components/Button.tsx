@@ -38,5 +38,6 @@ export function Button({ invert = false, className, children, ...props }: Button
 }
 
 function handleClick(props: ButtonProps, pathname: string) {
-  sendGAEvent('event', 'button_click', { source: pathname, href: props.href, label: props.children })
+  const label = React.Children.toArray(props.children).join('');
+  sendGAEvent('event', 'button_click', { source: pathname, href: props.href, label });
 }
