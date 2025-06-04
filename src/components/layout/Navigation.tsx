@@ -23,7 +23,10 @@ function NavigationItem({ href, children }: { href: string; children: React.Reac
   )
 }
 
-const Navigation = [{ href: '/projects', label: 'Projects' }]
+const Navigation = [
+  { href: '/blog', label: 'Blog' },
+  { href: '/projects', label: 'Projects' }
+]
 
 export function NavigationBar() {
   return (

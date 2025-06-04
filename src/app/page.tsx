@@ -1,8 +1,10 @@
 import { type Metadata } from 'next'
 
-import { AboutMe } from '@/components/blocks/sections/AboutMe'
-import HeroBanner from '@/components/blocks/sections/HeroBanner'
-import Projects from '@/components/blocks/sections/Projects'
+import { AboutMe } from '@/components/sections/AboutMe'
+import FeaturedPosts from '@/components/sections/FeaturedPosts'
+import HeroBanner from '@/components/sections/HeroBanner'
+import Projects from '@/components/sections/Projects'
+import { loadPosts } from '@/lib/mdx'
 
 export const metadata: Metadata = {
   title: {
@@ -13,11 +15,15 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
+  const posts = await loadPosts()
+
   return (
     <>
       <HeroBanner />
 
       <AboutMe />
+
+      <FeaturedPosts posts={posts} />
 
       <Projects />
     </>

@@ -90,11 +90,7 @@ export async function Projects() {
 export default function ProjectSection() {
   return (
     <div>
-      <SectionIntro
-        eyebrow="Projects"
-        title="A Curated Collection of My Projects and Related Documentation."
-        className="mt-24 sm:mt-32 lg:mt-40"
-      >
+      <SectionIntro eyebrow="Projects" title="A Curated Collection of My Projects and Related Documentation.">
         <Button href="https://trello.com/b/LqyE5lHq/project-tracking" className="mt-6">
           Projects Tracker
         </Button>
