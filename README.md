@@ -1,4 +1,3 @@
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/8BitAlex/8bitalex.github.io/nextjs.yml)](https://github.com/8BitAlex/8bitalex.github.io/actions)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/8BitAlex/8bitalex.github.io)
 [![GitHub License](https://img.shields.io/github/license/8bitAlex/8bitalex.github.io)](https://github.com/8BitAlex/8bitalex.github.io/blob/main/LICENSE)
 
@@ -11,14 +10,15 @@ https://www.alexsalerno.dev/
 
 ## Tech Stack
 
-|                                                    Built With |                                                                     |                                                                          |
-| ------------------------------------------------------------: | ------------------------------------------------------------------- | :----------------------------------------------------------------------- |
-|                                                    Typescript | !["Typescript Logo"](/public/img/icons/brands/typescript-sm.svg)    | A statically typed superset of Javascript.                               |
-|                                                  Tailwind CSS | !["Tailwind CSS Logo"](/public/img/icons/brands/tailwind-sm.svg)    | A Utility-first CSS framework for styling.                               |
-|                                                         React | !["React Logo"](/public/img/icons/brands/fa-react-sm.svg)           | A Javascript library for building UI.                                    |
-| !["NextJs Logo"](/public/img/icons/brands/nextjs-text-sm.svg) | !["NextJs Logo"](/public/img/icons/brands/nextjs-icon-sm.svg)       | A React framework for production-ready web applications.                 |
-|                                       Github & Github Actions | !["Github Logo"](/public/img/icons/brands/github-mark-white-sm.svg) | Version control and automated workflows such as build, deploy, and test. |
-|                                              Cloudflare Pages | !["Cloudflare Logo"](/public/img/icons/brands/fa-cloudflare-sm.svg) | The host of the website.                                                 |
+|                                                    Built With |                                                                      |                                                                                    |
+| ------------------------------------------------------------: | -------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |
+|                                                    Typescript | !["Typescript Logo"](/public/img/icons/brands/typescript-sm.svg)     | A statically typed superset of Javascript.                                         |
+|                                                  Tailwind CSS | !["Tailwind CSS Logo"](/public/img/icons/brands/tailwind-sm.svg)     | A Utility-first CSS framework for styling.                                         |
+|                                                         React | !["React Logo"](/public/img/icons/brands/fa-react-sm.svg)            | A Javascript library for building UI.                                              |
+| !["NextJs Logo"](/public/img/icons/brands/nextjs-text-sm.svg) | !["NextJs Logo"](/public/img/icons/brands/nextjs-icon-sm.svg)        | A React framework for production-ready web applications.                           |
+|                                       Github & Github Actions | !["Github Logo"](/public/img/icons/brands/github-mark-white-sm.svg)  | Version control and automated workflows such as build, deploy, and test.           |
+|                                            Google Analytics 4 | !["GA4 Logo"](/public/img/icons/brands/google-analytics-icon-sm.svg) | A web analytics service offered by Google that tracks and reports website traffic. |
+|                                            Cloudflare Workers | !["Cloudflare Logo"](/public/img/icons/brands/fa-cloudflare-sm.svg)  | Serverless functions and APIs that run on Cloudflare's edge network.               |
 
 ## Structure
 
