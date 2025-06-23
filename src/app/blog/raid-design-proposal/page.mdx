@@ -1,0 +1,195 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faLaptopCode } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  icon: faLaptopCode,
+  date: '2025-06-23',
+  title: 'Raid: A Tool for Orchestrating Distributed Application Development',
+  description:
+    'Raid is a configurable command-line application that orchestrates common development tasks, environments, and dependencies across distributed code repositories.'
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description
+}
+
+As modern software development evolves, teams often work with multiple repositories, complex environments, and numerous services running in parallel. Managing this complexity can become a daunting task. That's why I'm excited to unveil my design proposal for _Raid_, a tool designed to orchestrate distributed application development with a focus on simplifying the management of multiple repositories, environments, configurations, and their testing.
+
+In this post, I’ll walk through the key features and high-level design of _Raid_, and how it aims to streamline workflows for developers working with multi-repository and containerized applications.
+
+**TLDR**; _Raid_ is a configurable command-line application that orchestrates common development tasks, environments, and dependencies across distributed code repositories.
+
+## The Problem: Managing Complexity in Distributed Systems
+
+When working on large-scale applications, it's common to have code split across multiple repositories, each with its own set of dependencies, environments, and configurations. As applications grow in size, keeping track of these dependencies and ensuring that all parts of the system work in harmony can be overwhelming.
+
+Traditional approaches often rely on manual processes, scripts, tribal knowledge, or complex configuration management tools. However, these solutions can be cumbersome and difficult to maintain, especially when developers need to switch between different environments, run tests across services, or apply patches to multiple repositories or systems simultaneously.
+
+## The Solution: _Raid_ - A Unified Orchestration Tool
+
+_Raid_ is designed to solve these challenges by providing a unified platform for managing distributed development workflows. It integrates multiple repositories, environments, and testing processes into one easy-to-use tool, making it easier to build, test, and maintain modern applications. Built in Go, _Raid_ is fast, concurrent by design, and powered by portable, declarative configurations.
+
+### Key Features
+
+1. **Repository Management**:  
+   _Raid_ simplifies working with multiple repositories by automating the process of onboarding, syncing, cloning, and managing dependencies between them. Developers can easily track which branches or commits need to be worked on and ensure that all related repositories are updated accordingly.
+2. **Environment Management**:  
+   Local development environments can vary widely depending on the tech stack and dependencies of each repository. _Raid_ automates the setup of local environments (e.g., variables, virtual environments, containers) and ensures consistency across repositories. It supports various configuration formats like `.env` files for injecting environment variables and Docker for managing complex containerized environments.
+3. **Automated Testing**:  
+   Running tests across multiple repositories can be a tedious and error-prone task. With _Raid_, you can define test commands for each repository in a centralized configuration file. It can run tests in parallel, aggregate results, and provide detailed feedback on any failures, all from a single command.
+4. **Highly Configurable**:
+   At the heart of _Raid_ is its flexibility. All configurations for repositories, environments, and services are defined through easy-to-read YAML files. Developers can group distributed applications into _Profiles_ and customize settings for each repository, define specific testing workflows, and fine-tune environment configurations.
+5. **Custom Commands**:
+   In large projects it's very common to have scripts packaged in the code to automate common tasks. It's also common for developers to create their own scripts and forget to share them out. Raid fixes this gap by supporting custom commands that can be run anywhere from the command line. Scripts can then be packaged with the raid configuration in a single well-defined location and run anywhere anytime. Developers no longer have to rely on tribal knowledge to accomplish bespoke tasks.
+
+## High-Level Design
+
+### **Core Components**
+
+The core of _Raid_ consists of several key components that work together to manage the orchestration:
+
+- **Profile Manager**: Profiles define a grouping of repositories, dependencies, environments, and commands. Profiles are highly configurable, portable, and self-documenting.
+
+- **Configuration Specification**: The configuration specification defines the YAML schema and related components for building a `raid` profile.
+- **Repository Manager**: This component handles cloning, updating, and managing the state of multiple repositories. It tracks dependencies and ensures that all repositories are aligned.
+- **Environment Manager**: The environment manager ensures that each repository is running in the correct environment, whether that's setting up a local database, creating a virtual environment for Python, or spinning up Docker containers for microservices.
+
+- **Command Executor**: Run native and arbitrary custom commands reducing common developer toil. Native commands, such as 'test', are optimized for performance and readability. Custom commands are user-defined tasks adapting to the needs of any project.
+- **Test Execution**: The test execution interfaces with various testing frameworks (e.g., Jest, PyTest, GoTest) and runs tests across repositories. It aggregates results and provides feedback, all while running tests in parallel to speed up the process.
+
+### **Configuration Files**
+
+The core configuration of _Raid_ is defined using YAML files, which provide flexibility and ease of use.
+
+There are two types of configuration files:
+
+- **Profile Configuration**: A file with the name pattern `*.raid.yaml` that defines the properties of a raid profile (group of repositories and their dependencies).
+
+- **Repository Configuration**: A file with the name `raid.yaml` that defines the properties of an individual repository. Located in the root folder of a git repository.
+
+Here's an example of what a _profile_ configuration might look like:
+
+```yaml
+---
+name: raid profile
+
+repositories:
+  - name: repo1
+    path: /local/path/to/repo
+    url: https://github.com/user/repo1.git
+
+  - name: repo2
+    path: /local/path/to/repo
+    url: git@github.com:user/repo2.git
+
+dependencies:
+  - name: Database
+    install:
+	  mac:
+	    tasks:
+	      - shell:
+		      cmd: 'brew install mysql'
+    execute:
+      mac:
+        tasks:
+          - shell:
+              dir: /path/to/run
+              cmd: 'mysql -u root'
+    verify:
+	  mac:
+	    tasks:
+	      - shell:
+		      cmd: "brew services list | grep mysql | awk '{ print $2}' | grep 'started'"
+		      executor: /bin/bash
+
+environments:
+  - name: development
+    default: true
+	variables:
+	  - KEY=VALUE
+	  - DB_USER=root
+	tasks:
+	  - script:
+	      path: /path/to/script
+	      executor: bash
+  - name: testing
+	variables:
+	  - KEY=VALUE
+	  - DB_USER=root
+
+commands:
+  - name: fetch
+    usage: 'Retrieve frequently accessed resources'
+    sub-commands:
+      - name: logs
+        usage: 'Fetch service logs'
+        tasks:
+          - script:
+              path: /path/to/script
+              executor: python
+    options:
+      - flag: o
+        usage: 'Set output file path'
+        parameter:
+          required: true
+          name: output
+        variable: $outfile
+    out:
+      stdout: true
+      stderr: false
+      file: $outfile
+...
+```
+
+This configuration file allows you to specify raid profile details including repositories, dependencies, environments, and custom commands. It’s highly extensible, allowing you to add new services or repositories with ease.
+
+Here's an example of what a _repository_ configuration might look like:
+
+```yaml
+name: repo1
+main branch: main
+
+environments:
+  - name: development
+	variables:
+	  - KEY=VALUE
+  - name: testing
+	variables:
+	  - KEY=VALUE
+
+build:
+  mac:
+    tasks:
+      - shell
+          cmd: './gradle clean build'
+
+test:
+  parser: Gradle
+  mac:
+    tasks:
+      - shell
+          cmd: './gradle test'
+```
+
+### User Interface
+
+_Raid_ is controlled via a simple and intuitive CLI, which allows developers to trigger actions like managing repositories, running tests, or switching environments. The tool is built using Go’s `cobra` package, which provides flexibility in defining commands and flags.
+
+Here are some example commands:
+
+- **install**: Clones all required repos, builds dependencies, and configures the environment.
+- **environment, env**: Switch and manage environments.
+- **test**: Runs tests across all repositories.
+- **health**: Shows profile status like repo & dependency state, current environment, and last run test status.
+
+### **Concurrency and Performance**
+
+_Raid_ takes advantage of Go’s concurrency model to run tasks in parallel. Whether it's syncing repositories, building containers, or running tests, tasks are executed concurrently to maximize performance and minimize development time.
+
+## Conclusion
+
+_Raid_ aims to simplify the complexity of distributed application development by automating key processes such as repository management, environment setup, testing, and (eventually) container orchestration. _Raid_ simplifies the grind so you can focus on what matters most—writing great software.
+
+Stay tuned for updates and feel free check out the _Raid_ repo, [GitHub - 8bitAlex/raid](https://github.com/8bitAlex/raid), if you’re interested in contributing or using it for your projects!
