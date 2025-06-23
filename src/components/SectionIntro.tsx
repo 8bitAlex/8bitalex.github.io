@@ -23,14 +23,7 @@ export function SectionIntro({
         <h2>
           {eyebrow && (
             <>
-              <span
-                className={clsx(
-                  'mb-6 block font-display text-base font-semibold',
-                  invert ? 'text-white' : 'text-neutral-950'
-                )}
-              >
-                {eyebrow}
-              </span>
+              <span className="mb-6 block font-display text-base font-semibold text-red-700">{eyebrow}</span>
               <span className="sr-only"> - </span>
             </>
           )}
