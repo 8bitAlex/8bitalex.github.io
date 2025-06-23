@@ -22,7 +22,7 @@ import { TextGridList } from '../blocks/TextGridList'
 import { SectionHeader } from '../blocks/TextHeaders'
 
 const aboutMeText =
-  'Award-winning Software Engineer with 10+ years of experience in distributed systems, API frameworks, full-stack application development, and developer tooling.'
+  'Award-winning Software Engineer with 10+ years of experience in distributed systems, API frameworks, full-stack cloud application development, and developer tooling.'
 
 const vetBadge = (
   <div className="flex flex-row items-center">
@@ -86,7 +86,7 @@ export function AboutMe() {
           className="text-white"
           image={{ src: imageAlex }}
           bigText={aboutMeText}
-          text="Alex Salerno"
+          text="Alex Salerno (He/Him)"
           subtext={vetBadge}
         />
       </FadeIn>
