@@ -1,4 +1,5 @@
 import { SectionHeader } from '@/components/blocks/TextHeaders'
+import clsx from 'clsx'
 import { Container } from './Container'
 
 export default function Section({
@@ -17,9 +18,9 @@ export default function Section({
   invert?: boolean
 }) {
   return (
-    <section className={className}>
+    <section className={clsx('mt-12 mb-12 sm:mt-16 lg:mt-18', className)}>
       <SectionHeader title={title ? title : ''} description={description} invert={invert} eyebrow={eyebrow} />
-      <Container className="mb-8">
+      <Container>
         <div>{children}</div>
       </Container>
     </section>
