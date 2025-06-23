@@ -1,10 +1,9 @@
-import { ContactSection } from '@/components/ContactSection'
 import { FadeIn } from '@/components/FadeIn'
 import { Container } from '@/components/layout/Container'
 import { MDXComponents } from '@/components/MDXComponents'
 import { PageLinks } from '@/components/PageLinks'
 import { formatDate } from '@/lib/formatDate'
-import { type Post, type MDXEntry, loadPosts } from '@/lib/mdx'
+import { type MDXEntry, type Post, loadPosts } from '@/lib/mdx'
 
 export default async function BlogArticleWrapper({
   post: post,
@@ -14,7 +13,7 @@ export default async function BlogArticleWrapper({
   children: React.ReactNode
 }) {
   const allPosts = await loadPosts()
-  const morePosts = allPosts.filter(({ metadata }) => metadata !== post.metadata).slice(0, 2)
+  const morePosts = allPosts.filter(({ title }) => title !== post.title).slice(0, 2)
 
   return (
     <>
@@ -37,10 +36,8 @@ export default async function BlogArticleWrapper({
       </Container>
 
       {morePosts.length > 0 && (
-        <PageLinks className="mt-24 sm:mt-32 lg:mt-40" title="More articles" pages={morePosts} />
+        <PageLinks className="mt-12 sm:mt-16 lg:mt-20" title="More articles" pages={morePosts} />
       )}
-
-      <ContactSection />
     </>
   )
 }
