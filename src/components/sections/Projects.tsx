@@ -1,13 +1,12 @@
 import { Border } from '@/components/Border'
 import { Button } from '@/components/Button'
 import { FadeIn } from '@/components/FadeIn'
-import { Container } from '@/components/layout/Container'
-import ProjectQuote from '@/components/ProjectQuote'
-import { SectionIntro } from '@/components/SectionIntro'
 import { StylizedImage } from '@/components/StylizedImage'
 import { TagList, TagListItem } from '@/components/TagList'
 import { loadProjects, Project } from '@/lib/mdx'
 import React from 'react'
+import { QuoteBanner } from '../blocks/QuoteBanner'
+import Section from '../layout/Section'
 
 function ProjectDetails({
   project,
@@ -19,7 +18,7 @@ function ProjectDetails({
   children?: React.ReactNode
 }) {
   return (
-    <Container className="group/section [counter-increment:section]">
+    <div className="group/section [counter-increment:section]">
       <div className="lg:flex lg:items-center lg:justify-end lg:gap-x-8 lg:group-even/section:justify-start xl:gap-x-20">
         <div className="flex justify-center">
           <FadeIn className="w-[33.75rem] flex-none lg:w-[45rem]">
@@ -65,7 +64,7 @@ function ProjectDetails({
           </FadeIn>
         </div>
       </div>
-    </Container>
+    </div>
   )
 }
 
@@ -90,13 +89,20 @@ export async function Projects() {
 export default function ProjectSection() {
   return (
     <div>
-      <SectionIntro eyebrow="Projects" title="A Curated Collection of My Projects and Related Documentation.">
-        <Button href="https://trello.com/b/LqyE5lHq/project-tracking" className="mt-6">
-          Projects Tracker
-        </Button>
-        <ProjectQuote />
-      </SectionIntro>
-      <Projects />
+      <Section
+        eyebrow="Projects"
+        title="A Curated Collection of My Projects and Related Documentation."
+        description={
+          <>
+            <Button href="https://trello.com/b/LqyE5lHq/project-tracking" className="mt-6">
+              Projects Tracker
+            </Button>
+          </>
+        }
+      >
+        <Projects />
+      </Section>
+      <QuoteBanner author={{ name: 'Guy Kawasaki' }}>Ideas are easy. Implementation is hard</QuoteBanner>
     </div>
   )
 }
