@@ -9,8 +9,6 @@ import { recmaImportImages } from 'recma-import-images'
 import rehypeUnwrapImages from 'rehype-unwrap-images'
 import remarkGfm from 'remark-gfm'
 import { remarkRehypeWrap } from 'remark-rehype-wrap'
-import { createHighlighter } from 'shiki'
-import { createCssVariablesTheme } from 'shiki/core'
 import { unifiedConditional } from 'unified-conditional'
 
 /** @type {import('next').NextConfig} */
@@ -43,19 +41,6 @@ function remarkMDXLayout(source, metaName) {
   }
 }
 
-// todo migrate to shiki theme
-const cssTheme = createCssVariablesTheme({
-  name: 'css-variables',
-  variablePrefix: '--shiki-',
-  variableDefaults: {},
-  fontStyle: true
-})
-
-const highlighter = await createHighlighter({
-  langs: ['javascript'],
-  themes: [cssTheme]
-})
-
 const withMDX = createMDX({
   extension: /\.mdx$/,
   options: {
@@ -64,7 +49,7 @@ const withMDX = createMDX({
       [
         rehypeShiki,
         {
-          highlighter
+          theme: 'nord'
         }
       ],
       [

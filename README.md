@@ -8,6 +8,8 @@ Welcome to the GitHub repository for my personal website and portfolio. This sit
 You can visit the site live at:
 https://www.alexsalerno.dev/
 
+Project & Issue Tracking: https://trello.com/b/nYFrWcuZ/devsite-roadmap
+
 ## Tech Stack
 
 |                                                    Built With |                                                                      |                                                                                    |

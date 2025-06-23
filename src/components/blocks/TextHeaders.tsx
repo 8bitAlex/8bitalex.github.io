@@ -11,12 +11,7 @@ type SectionHeaderProps = {
 
 export function SectionHeader(props: SectionHeaderProps) {
   return (
-    <SectionIntro
-      eyebrow={props.eyebrow}
-      title={props.title}
-      className={clsx('mt-24', props.className)}
-      invert={props.invert}
-    >
+    <SectionIntro eyebrow={props.eyebrow} title={props.title} className={props.className} invert={props.invert}>
       <div>{props.description}</div>
     </SectionIntro>
   )

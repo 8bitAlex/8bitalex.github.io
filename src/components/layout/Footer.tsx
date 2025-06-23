@@ -12,6 +12,7 @@ const navigation = [
     title: 'Site Map',
     links: [
       { title: 'Home', href: '/' },
+      { title: 'Blog', href: '/blog' },
       { title: 'Projects', href: '/projects' }
     ]
   },
