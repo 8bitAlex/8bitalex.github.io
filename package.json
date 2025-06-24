@@ -41,7 +41,7 @@
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.12",
     "@eslint/eslintrc": "^3",
-    "@shikijs/rehype": "^3.4.0",
+    "@shikijs/rehype": "^3.7.0",
     "@tailwindcss/postcss": "^4",
     "@types/mdx": "^2.0.13",
     "@types/node": "^22",
