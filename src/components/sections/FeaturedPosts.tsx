@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { QuoteBanner } from '../blocks/QuoteBanner'
 
 export default function FeaturedPosts({ posts }: { posts: Array<MDXEntry<Post>> }) {
-  const cols = Math.min(posts.length, 3)
+  const cols = 'grid-cols-' + Math.min(posts.length, 3)
 
   return (
     <div>
       <Section eyebrow="Blog Posts" title="Experience the latest articles and insights">
-        <FadeInStagger className={`grid grid-cols-1 gap-8 lg:grid-cols-${cols}`}>
+        <FadeInStagger className={`grid grid-cols-1 gap-8 lg:${cols}`}>
           {posts.map((post) => (
             <FadeIn key={post.href} className="flex">
               <article className="relative flex w-full flex-col rounded-3xl p-6 ring-1 ring-neutral-950/5 transition hover:bg-neutral-50 sm:p-8">
