@@ -8,7 +8,7 @@ import { QuoteBanner } from '../blocks/QuoteBanner'
 const colsMap: Record<number, string> = {
   1: 'lg:grid-cols-1',
   2: 'lg:grid-cols-2',
-  3: 'lg:grid-cols-3',
+  3: 'lg:grid-cols-3'
 }
 
 export default function FeaturedPosts({ posts }: { posts: Array<MDXEntry<Post>> }) {
