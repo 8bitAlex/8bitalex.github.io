@@ -59,6 +59,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "unified-conditional": "0.0.2",
-    "wrangler": "^4.14.4"
+    "wrangler": "^4.23.0"
   }
 }
