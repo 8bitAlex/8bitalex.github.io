@@ -16,7 +16,7 @@ export function TextGridList({ title, items, invert, className }: Props) {
       <GridList className="mt-10">
         {items.map((item, index) => {
           return (
-            <GridListItem key={index} title={item.title} invert={invert}>
+            <GridListItem key={item.title} title={item.title} invert={invert}>
               {item.text}
             </GridListItem>
           )
