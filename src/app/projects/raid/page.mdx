@@ -1,0 +1,63 @@
+import image from './raid.png'
+
+export const project = {
+  order: 3,
+  title: 'Raid',
+  description:
+    'An open-source command-line tool that orchestrates distributed application development — managing repositories, environments, dependencies, and testing across multi-repo codebases from a single configurable YAML system.',
+  abstract: (
+    <div>
+      <p>
+        Raid is a configurable CLI application built in Go that orchestrates common development tasks, environments, and
+        dependencies across distributed code repositories.
+      </p>
+      <br />
+      <p>
+        It solves the complexity of working across multiple repos by automating onboarding, environment setup, dependency
+        management, and parallel test execution — all driven by a portable, declarative YAML configuration.
+      </p>
+      <br />
+      <p>
+        Developers can group repositories into <em>Profiles</em>, define custom commands, and run everything from a
+        single tool — no more tribal knowledge, scattered scripts, or manual wrangling of distributed systems.
+      </p>
+    </div>
+  ),
+  startDate: '2025-6-23',
+  date: '2025-6-23',
+  image: image,
+  href: '/projects/raid',
+  repo: 'https://github.com/8bitAlex/raid',
+  status: 'In Development',
+  type: 'Developer Tooling',
+  tags: ['CLI', 'Go', 'Open-Source', 'DevOps']
+}
+
+export const metadata = {
+  title: project.title,
+  description: project.description
+}
+
+Raid is a configurable command-line application that orchestrates common development tasks, environments, and dependencies across distributed code repositories.
+
+## The Problem
+
+Modern software development often spans multiple repositories, each with its own environments, dependencies, and configurations. Keeping everything aligned — especially across a team — relies on manual processes, tribal knowledge, and scattered scripts that are easy to miss and hard to maintain.
+
+## The Solution
+
+Raid brings it all together under one tool. Define your repositories, environments, and dependencies once in a YAML _Profile_, and Raid handles the rest: cloning repos, spinning up environments, managing dependencies, running tests in parallel, and executing custom commands — anywhere, anytime.
+
+## Key Features
+
+- **Repository Management** — automates cloning, syncing, and dependency tracking across repos
+- **Environment Management** — consistent local environments via `.env` files and Docker support
+- **Parallel Test Execution** — runs tests across all repos concurrently and aggregates results
+- **Custom Commands** — package bespoke scripts alongside the config so nothing gets lost
+- **Declarative YAML Config** — portable, self-documenting profiles that travel with the project
+
+## Built With
+
+Go, Cobra CLI, YAML configuration, concurrent task execution via goroutines.
+
+Read the full design proposal on the [blog](/blog/raid-design-proposal).
