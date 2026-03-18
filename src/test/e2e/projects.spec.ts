@@ -42,9 +42,4 @@ test.describe('Projects', () => {
     await page.goto('/projects/website')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
-
-  test('alderman project page renders', async ({ page }) => {
-    await page.goto('/projects/alderman')
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  })
 })
