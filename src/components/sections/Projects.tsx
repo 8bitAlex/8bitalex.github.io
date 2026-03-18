@@ -46,7 +46,7 @@ function ProjectDetails({
             <div className="mt-6">{children}</div>
             <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
               <TagList>
-                {project.tags?.map((tag, idx) => (
+                {project.tags?.map((tag) => (
                   <TagListItem key={tag} className="text-sm font-semibold text-neutral-950">
                     {tag}
                   </TagListItem>

@@ -6,6 +6,7 @@ import { HeaderWithDivider } from './TextHeaders'
 
 type Props = {
   name?: string | React.ReactNode
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: any[][]
   className?: string
   center?: boolean

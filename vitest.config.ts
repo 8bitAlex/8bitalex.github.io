@@ -1,14 +1,12 @@
+import react from '@vitejs/plugin-react'
 import path from 'path'
 import { defineConfig } from 'vitest/config'
 
 const mockDir = path.resolve(__dirname, 'src/test/__mocks__')
 
 export default defineConfig({
-  esbuild: {
-    jsx: 'automatic',
-    jsxImportSource: 'react',
-  },
   plugins: [
+    react(),
     {
       // Treat static assets as simple objects so next/image mocks work
       name: 'mock-static-assets',

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import React from 'react'
 import type { MDXEntry, Post } from '@/lib/mdx'
 
 // Mock the mdx module before importing the page
@@ -14,7 +15,7 @@ vi.mock('@/lib/mdx', () => ({
 
 // Mock Button since it uses usePathname
 vi.mock('@/components/Button', () => ({
-  Button: ({ href, children, className, ...rest }: any) => (
+  Button: ({ href, children, className, ...rest }: { href?: string; children?: React.ReactNode; className?: string; [key: string]: unknown }) => (
     <a href={href} className={className} {...rest}>{children}</a>
   ),
 }))
@@ -26,7 +27,7 @@ function makePost(overrides: Partial<Post & { href: string }> = {}): MDXEntry<Po
     description: 'Article description.',
     date: '2025-06-01',
     type: 'Article',
-    icon: { prefix: 'fas', iconName: 'code' } as any,
+    icon: { prefix: 'fas', iconName: 'code' } as unknown as Post['icon'],
     image: { src: '/img.jpg' },
     author: { name: 'Alex Salerno', image: { src: '/alex.jpg' } },
     tags: [],

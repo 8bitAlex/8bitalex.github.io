@@ -10,7 +10,7 @@ function makePost(overrides: Partial<Post & { href: string }> = {}): MDXEntry<Po
     description: 'A test description',
     date: '2025-06-01',
     type: 'Article',
-    icon: { prefix: 'fas', iconName: 'laptop-code' } as any,
+    icon: { prefix: 'fas', iconName: 'laptop-code' } as unknown as Post['icon'],
     image: { src: '/img.jpg' },
     author: { name: 'Alex Salerno', image: { src: '/alex.jpg' } },
     tags: [],
