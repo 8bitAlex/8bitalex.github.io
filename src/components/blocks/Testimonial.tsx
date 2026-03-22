@@ -27,7 +27,7 @@ export default function Testimonial(props: Props) {
             <p>{props.bigText}</p>
           </blockquote>
         </div>
-        <div className="xs:w-full col-end-1 sm:row-span-4 sm:w-64 lg:w-72">
+        <div className="col-end-1 sm:row-span-4 sm:w-64 lg:w-72">
           <ProfileCard
             image={props.image}
             name={props.text}

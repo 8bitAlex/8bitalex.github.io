@@ -1,4 +1,5 @@
 import { FadeIn } from '@/components/FadeIn'
+import { SlotWord } from '@/components/SlotWord'
 import { Container } from '@/components/layout/Container'
 
 export default function HeroBanner() {
@@ -9,8 +10,31 @@ export default function HeroBanner() {
           Alex Salerno
         </h1>
         <p className="mt-6 text-xl text-neutral-600">
-          <span className="text-red-700">Software Engineer.</span> Designer.
-          Innovator.
+          <SlotWord
+            words={[
+              'Problem Solver.',
+              'Architect.',
+              'Debugger.',
+              'Builder.',
+              'Nerd.',
+              'Tinkerer.',
+              'Craftsman.',
+              'Hacker.',
+              'Developer.',
+              'Maker.',
+              'Driven.',
+              'Curious.',
+              'Creative.',
+              'Passionate.',
+              'Dedicated.',
+              'Gamer.',
+              'AI Wrangler.',
+              'Code Monkey.',
+              'Veteran.'
+            ]}
+            final="Software Engineer."
+          />{' '}
+          Designer. Innovator.
         </p>
       </FadeIn>
     </Container>

@@ -4,6 +4,7 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 import { type Metadata } from 'next'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.alexsalerno.dev'),
   title: {
     template: '%s by Alex Salerno',
     default: 'Alex Salerno | Software Engineer',
@@ -13,6 +14,14 @@ export const metadata: Metadata = {
     email: false,
     address: false,
     telephone: false,
+  },
+  openGraph: {
+    siteName: 'Alex Salerno',
+    type: 'website',
+    url: 'https://www.alexsalerno.dev',
+  },
+  twitter: {
+    card: 'summary_large_image',
   },
   keywords: [
     'Alex Salerno',

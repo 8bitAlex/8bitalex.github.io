@@ -27,7 +27,7 @@ function ProjectDetails({
               alt={project.title + ' image'}
               width={project.image.width}
               height={project.image.height}
-              blurDataURL={project.image.blurDataURL}
+              {...(project.image.blurDataURL && { blurDataURL: project.image.blurDataURL })}
               shape={shape}
               sizes="(min-width: 1024px) 41rem, 31rem"
               className="justify-center lg:justify-end lg:group-even/section:justify-start"
@@ -46,8 +46,8 @@ function ProjectDetails({
             <div className="mt-6">{children}</div>
             <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2">
               <TagList>
-                {project.tags?.map((tag, idx) => (
-                  <TagListItem key={idx} className="text-sm font-semibold text-neutral-950">
+                {project.tags?.map((tag) => (
+                  <TagListItem key={tag} className="text-sm font-semibold text-neutral-950">
                     {tag}
                   </TagListItem>
                 ))}
@@ -77,7 +77,7 @@ export async function Projects() {
         .sort((a, b) => a.order - b.order)
         .map((project, idx) => {
           return (
-            <ProjectDetails project={project} key={idx} shape={(idx % 3) as 0 | 1 | 2}>
+            <ProjectDetails project={project} key={project.title} shape={(idx % 3) as 0 | 1 | 2}>
               {project.abstract}
             </ProjectDetails>
           )

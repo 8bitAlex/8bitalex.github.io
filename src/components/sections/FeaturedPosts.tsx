@@ -5,13 +5,19 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Link from 'next/link'
 import { QuoteBanner } from '../blocks/QuoteBanner'
 
+const colsMap: Record<number, string> = {
+  1: 'lg:grid-cols-1',
+  2: 'lg:grid-cols-2',
+  3: 'lg:grid-cols-3'
+}
+
 export default function FeaturedPosts({ posts }: { posts: Array<MDXEntry<Post>> }) {
-  const cols = 'grid-cols-' + Math.min(posts.length, 3)
+  const lgCols = colsMap[Math.min(posts.length, 3)] ?? 'lg:grid-cols-3'
 
   return (
     <div>
       <Section eyebrow="Blog Posts" title="Experience the latest articles and insights">
-        <FadeInStagger className={`grid grid-cols-1 gap-8 lg:${cols}`}>
+        <FadeInStagger className={`grid grid-cols-1 gap-8 ${lgCols}`}>
           {posts.map((post) => (
             <FadeIn key={post.href} className="flex">
               <article className="relative flex w-full flex-col rounded-3xl p-6 ring-1 ring-neutral-950/5 transition hover:bg-neutral-50 sm:p-8">

@@ -14,9 +14,9 @@ export function TextGridList({ title, items, invert, className }: Props) {
     <Container className={className}>
       <HeaderWithDivider name={title} invert={invert} />
       <GridList className="mt-10">
-        {items.map((item, index) => {
+        {items.map((item) => {
           return (
-            <GridListItem key={index} title={item.title} invert={invert}>
+            <GridListItem key={item.title} title={item.title} invert={invert}>
               {item.text}
             </GridListItem>
           )
