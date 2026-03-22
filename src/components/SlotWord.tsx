@@ -24,19 +24,21 @@ export function SlotWord({
   const [animated, setAnimated] = useState(false)
   const shouldReduceMotion = useReducedMotion()
 
-  useEffect(() => {
-    if (shouldReduceMotion) {
-      setWord(final)
-      return
-    }
+  // Derive display word: skip animation state and show final immediately for reduced motion
+  const displayWord = shouldReduceMotion ? final : word
 
-    // Swap to a random starting word without animation (animated is still false here)
-    setWord(words[Math.floor(Math.random() * words.length)])
+  useEffect(() => {
+    if (shouldReduceMotion) return
+
+    // Move initial randomization into a callback to satisfy react-hooks/set-state-in-effect
+    const initTimer = setTimeout(() => {
+      setWord(words[Math.floor(Math.random() * words.length)])
+    }, 0)
 
     // Enable animations after the initial swap has painted
     const raf = requestAnimationFrame(() => setAnimated(true))
 
-    // Animate 2 more random words then land on final — consistent beat, slower final roll
+    // Animate 2 pool words then land on final — consistent beat, slower final roll
     const pool = [...words].sort(() => Math.random() - 0.5).slice(0, 2)
     const timers: ReturnType<typeof setTimeout>[] = []
     pool.forEach((next, i) => {
@@ -45,6 +47,7 @@ export function SlotWord({
     timers.push(setTimeout(() => setWord(final), startDelay + beat * pool.length))
 
     return () => {
+      clearTimeout(initTimer)
       cancelAnimationFrame(raf)
       timers.forEach(clearTimeout)
     }
@@ -58,14 +61,14 @@ export function SlotWord({
       </span>
       <AnimatePresence initial={false} mode="popLayout">
         <motion.span
-          key={word}
+          key={displayWord}
           className="absolute left-0 whitespace-nowrap text-red-700"
           initial={animated ? { y: '-100%' } : false}
           animate={{ y: '0%' }}
           exit={{ y: '100%' }}
-          transition={{ duration: word === final ? finalDuration : wordDuration, ease: 'easeInOut' }}
+          transition={{ duration: displayWord === final ? finalDuration : wordDuration, ease: 'easeInOut' }}
         >
-          {word}
+          {displayWord}
         </motion.span>
       </AnimatePresence>
     </span>
