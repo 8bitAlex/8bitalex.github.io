@@ -1,6 +1,6 @@
+import HeroBanner from '@/components/sections/HeroBanner'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import HeroBanner from '@/components/sections/HeroBanner'
 
 describe('HeroBanner', () => {
   it('renders an h1 with "Alex Salerno"', () => {
@@ -10,8 +10,9 @@ describe('HeroBanner', () => {
 
   it('renders "Software Engineer." with red color class', () => {
     render(<HeroBanner />)
-    const span = screen.getByText('Software Engineer.')
-    expect(span).toHaveClass('text-red-700')
+    // SlotWord renders two spans: invisible placeholder + animated word
+    const spans = screen.getAllByText('Software Engineer.')
+    expect(spans.some((s) => s.classList.contains('text-red-700'))).toBe(true)
   })
 
   it('renders "Designer." text', () => {
