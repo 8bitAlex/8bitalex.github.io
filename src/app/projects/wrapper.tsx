@@ -77,7 +77,7 @@ export default async function ProjectLayout({
             <div className="border-y border-neutral-200 bg-neutral-100">
               <div className="mx-auto -my-px max-w-[76rem] bg-neutral-200">
                 <GrayscaleTransitionImage
-                  {...project.image}
+                  src={project.image}
                   quality={90}
                   className="max-h-[80vh] object-cover"
                   priority

@@ -27,7 +27,7 @@ function ProjectDetails({
               alt={project.title + ' image'}
               width={project.image.width}
               height={project.image.height}
-              blurDataURL={project.image.blurDataURL}
+              {...(project.image.blurDataURL && { blurDataURL: project.image.blurDataURL })}
               shape={shape}
               sizes="(min-width: 1024px) 41rem, 31rem"
               className="justify-center lg:justify-end lg:group-even/section:justify-start"
