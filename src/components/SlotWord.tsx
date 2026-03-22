@@ -20,7 +20,7 @@ export function SlotWord({
   wordDuration = 0.12,
   finalDuration = 1,
 }: SlotWordProps) {
-  const [word, setWord] = useState(words[0])
+  const [word, setWord] = useState('')
   const [animated, setAnimated] = useState(false)
   const shouldReduceMotion = useReducedMotion()
 

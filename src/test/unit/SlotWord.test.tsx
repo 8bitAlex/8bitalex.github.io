@@ -26,7 +26,13 @@ describe('SlotWord', () => {
 
   it('renders the animated span with red styling', () => {
     const { container } = render(<SlotWord words={WORDS} final={FINAL} />)
+    // Span always renders (even empty on SSR) with the red class
     expect(container.querySelector('.text-red-700')).toBeInTheDocument()
+  })
+
+  it('renders with empty content initially (no flash on SSR)', () => {
+    const { container } = render(<SlotWord words={WORDS} final={FINAL} />)
+    expect(container.querySelector('.text-red-700')?.textContent).toBe('')
   })
 
   it('lands on the final word after all timers complete', () => {
