@@ -8,11 +8,15 @@ describe('HeroBanner', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Alex Salerno')
   })
 
-  it('renders "Software Engineer." with red color class', () => {
-    render(<HeroBanner />)
-    // SlotWord renders two spans: invisible placeholder + animated word
-    const spans = screen.getAllByText('Software Engineer.')
-    expect(spans.some((s) => s.classList.contains('text-red-700'))).toBe(true)
+  it('renders "Software Engineer." in the SlotWord placeholder', () => {
+    const { container } = render(<HeroBanner />)
+    const placeholder = container.querySelector('.invisible')
+    expect(placeholder?.textContent).toBe('Software Engineer.')
+  })
+
+  it('renders the SlotWord animated span with red color class', () => {
+    const { container } = render(<HeroBanner />)
+    expect(container.querySelector('.text-red-700')).toBeInTheDocument()
   })
 
   it('renders "Designer." text', () => {

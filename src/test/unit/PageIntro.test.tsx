@@ -21,6 +21,16 @@ describe('PageIntro', () => {
     expect(screen.getByText('Blog')).toHaveClass('text-red-700')
   })
 
+  it('eyebrow is not part of the h1', () => {
+    render(
+      <PageIntro eyebrow="Blog" title="Articles">
+        <p>desc</p>
+      </PageIntro>
+    )
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading).not.toHaveTextContent('Blog')
+  })
+
   it('renders the title as h1', () => {
     render(
       <PageIntro eyebrow="Blog" title="Articles and More">
@@ -38,17 +48,6 @@ describe('PageIntro', () => {
       </PageIntro>
     )
     expect(screen.getByText('Child content here')).toBeInTheDocument()
-  })
-
-  it('includes sr-only separator', () => {
-    const { container } = render(
-      <PageIntro eyebrow="e" title="t">
-        <p>c</p>
-      </PageIntro>
-    )
-    const srOnly = container.querySelector('.sr-only')
-    expect(srOnly).toBeInTheDocument()
-    expect(srOnly?.textContent).toBe(' - ')
   })
 
   it('applies text-center class when centered=true', () => {
