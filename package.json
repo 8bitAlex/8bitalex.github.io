@@ -73,6 +73,6 @@
     "typescript": "^5",
     "unified-conditional": "0.0.2",
     "vitest": "^4.1.0",
-    "wrangler": "^4.75.0"
+    "wrangler": "^4.90.0"
   }
 }
