@@ -2,6 +2,8 @@ import { RootLayout } from '@/components/layout/RootLayout'
 import '@/style/tailwind.css'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import { type Metadata } from 'next'
+import { PostHogProvider } from './providers'
+import PostHogPageView from './PostHogPageView'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.alexsalerno.dev'),
@@ -67,7 +69,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" className="h-full bg-neutral-950 text-base antialiased">
       <GoogleAnalytics gaId="G-LH0F01NP3E" />
       <body className="flex min-h-full flex-col">
-        <RootLayout>{children}</RootLayout>
+        <PostHogProvider>
+          <PostHogPageView />
+          <RootLayout>{children}</RootLayout>
+        </PostHogProvider>
       </body>
     </html>
   )
