@@ -13,7 +13,18 @@ import { unifiedConditional } from 'unified-conditional'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx']
+  pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
+  // PostHog reverse-proxy: route /ingest/* through the site origin so ad
+  // blockers (uBlock, Brave shields, etc.) don't drop analytics requests.
+  // See: https://posthog.com/docs/advanced/proxy/nextjs
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      { source: '/ingest/static/:path*', destination: 'https://us-assets.i.posthog.com/static/:path*' },
+      { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
+      { source: '/ingest/flags', destination: 'https://us.i.posthog.com/flags' },
+    ]
+  },
 }
 
 function remarkMDXLayout(source, metaName) {
