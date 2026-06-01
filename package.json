@@ -38,9 +38,9 @@
     "clsx": "^2.1.1",
     "escape-string-regexp": "^5.0.0",
     "fast-glob": "^3.3.3",
-    "framer-motion": "^12.38.0",
+    "framer-motion": "^12.39.0",
     "next": "^15.3.3",
-    "posthog-js": "^1.373.4",
+    "posthog-js": "^1.374.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -48,7 +48,7 @@
     "@cloudflare/next-on-pages": "^1.13.16",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.60.0",
-    "@shikijs/rehype": "^4.0.2",
+    "@shikijs/rehype": "^4.1.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -57,7 +57,7 @@
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
@@ -73,7 +73,7 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "unified-conditional": "0.0.2",
-    "vitest": "^4.1.0",
+    "vitest": "^4.1.6",
     "wrangler": "^4.90.0"
   }
 }
