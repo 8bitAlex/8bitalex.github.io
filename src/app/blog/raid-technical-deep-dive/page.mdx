@@ -23,7 +23,7 @@ If the design proposal was the "what" and the "why," this is the "how."
 
 The original pain came from my time at Workday. The work spanned multiple repositories — individual services and a large monorepo — and there were enough people merging changes daily that local environments were perpetually drifting out of sync. Setting up a remote test VM, patching a service against a hotfix branch, swapping config to point at a sandbox, running tests across more than one repo at a time — each of these involved tracking down a half-remembered shell script in someone's `bin/` folder, or asking on Slack.
 
-I started writing a small internal TypeScript script runner to centralize the tribal knowledge. Over a few years it grew into something genuinely useful — but only for our team's specific stack. When I left, I extracted the design ideas, rewrote it in Go, and released the open-source version. Eventually I killed our internal app and replaced it with the open-source one.
+I started writing a small internal TypeScript script runner to centralize the tribal knowledge. Over a few years it grew into something genuinely useful — but only for our team's specific stack. Eventually I extracted the design ideas, rewrote it in Go, and released the open-source version while still at Workday. We killed the internal app and switched our team over to the open-source one. After I left, I kept building on it — most of what's in _Raid_ today came after that.
 
 _Raid_ is what came out of that.
 
