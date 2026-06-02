@@ -1,61 +1,59 @@
-![GitHub package.json version](https://img.shields.io/github/package-json/v/8BitAlex/8bitalex.github.io)
-[![GitHub License](https://img.shields.io/github/license/8bitAlex/8bitalex.github.io)](https://github.com/8BitAlex/8bitalex.github.io/blob/main/LICENSE)
+# alexsalerno.dev — personal site & blog
 
-# Alex Salerno's Blog & Portfolio
+Source for my personal website at **[alexsalerno.dev](https://www.alexsalerno.dev/)** — a portfolio of the things I've built, a blog where I write about engineering decisions in long form, and the central place I direct people who want to understand how I work.
 
-Welcome to the GitHub repository for my personal website and portfolio. This site showcases my projects, skills, experience, and acts as a central hub for my professional online presence.
+If you're a recruiter, hiring manager, or just curious — **start with [the live site](https://www.alexsalerno.dev/)**. This README is for people who want to look at the code.
 
-You can visit the site live at:
-https://www.alexsalerno.dev/
+[![License](https://img.shields.io/github/license/8bitAlex/8bitalex.github.io)](./LICENSE)
+[![Version](https://img.shields.io/github/package-json/v/8BitAlex/8bitalex.github.io)](./package.json)
 
-Project & Issue Tracking: https://trello.com/b/nYFrWcuZ/devsite-roadmap
+---
 
-## Tech Stack
+## Who I am
 
-|                                                    Built With |                                                                      |                                                                                    |
-| ------------------------------------------------------------: | -------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |
-|                                                    Typescript | !["Typescript Logo"](/public/img/icons/brands/typescript-sm.svg)     | A statically typed superset of Javascript.                                         |
-|                                                  Tailwind CSS | !["Tailwind CSS Logo"](/public/img/icons/brands/tailwind-sm.svg)     | A Utility-first CSS framework for styling.                                         |
-|                                                         React | !["React Logo"](/public/img/icons/brands/fa-react-sm.svg)            | A Javascript library for building UI.                                              |
-| !["NextJs Logo"](/public/img/icons/brands/nextjs-text-sm.svg) | !["NextJs Logo"](/public/img/icons/brands/nextjs-icon-sm.svg)        | A React framework for production-ready web applications.                           |
-|                                       Github & Github Actions | !["Github Logo"](/public/img/icons/brands/github-mark-white-sm.svg)  | Version control and automated workflows such as build, deploy, and test.           |
-|                                            Google Analytics 4 | !["GA4 Logo"](/public/img/icons/brands/google-analytics-icon-sm.svg) | A web analytics service offered by Google that tracks and reports website traffic. |
-|                                            Cloudflare Workers | !["Cloudflare Logo"](/public/img/icons/brands/fa-cloudflare-sm.svg)  | Serverless functions and APIs that run on Cloudflare's edge network.               |
+I'm **Alex Salerno**, a software engineer with 10+ years of experience in distributed systems, API frameworks, full-stack cloud application development, and developer tooling. Most recently I spent several years at Workday building backend systems, including the Graph API and API Router (Scala + Akka + GraphQL/REST). Before that: Innovative Defense Technologies, SPAWAR, and a stint in the California Army National Guard.
 
-## Structure
+These days I'm building [**Raid**](https://github.com/8bitAlex/raid) — an open-source Go CLI for orchestrating multi-repo development workflows, currently approaching v1.0. I care about declarative configuration, opt-in telemetry, clean naming, and tools that explain themselves to humans and agents alike.
 
-- `/src` : Application code
-  - `/app` : NextJs routing and application layout.
-  - `/components` : UI elements
-    - `/blocks` : Composite UI elements.
-  - `/lib` : Shared utility functions, helpers, and modules.
-  - `/style` : Global styling configurations.
-- `/public` : Static assets like images and files.
+## Featured work
 
-## Development
+| Project | What it is |
+|---|---|
+| [**Raid**](https://github.com/8bitAlex/raid) | Open-source Go CLI for orchestrating multi-repo dev workflows. Declarative YAML, typed task primitives, MCP integration for AI agents. → [Technical deep dive on the blog](https://www.alexsalerno.dev/blog/raid-technical-deep-dive) |
+| [**Alderman**](https://github.com/8bitAlex/Alderman-API) | Civic-tech project surfacing public-meeting information from local government. ([API](https://github.com/8bitAlex/Alderman-API) · [Web](https://github.com/8bitAlex/Alderman-Web)) |
+| [**Pixelated Realms**](https://pixelatedrealms.com/) | Weekly video-game podcast I co-host. |
 
-To run this project locally:
+More under [/projects](https://www.alexsalerno.dev/projects).
 
-1. Clone the repository:
+## Recent writing
 
-   `git clone https://github.com/8bitAlex/8bitalex.github.io.git`
+The blog is where I write about engineering decisions and retrospectives in long form, not link-roundups.
 
-2. Navigate into the directory:
+- [Building Raid: A Technical Deep Dive](https://www.alexsalerno.dev/blog/raid-technical-deep-dive) — a year after the design proposal, what got built and what I learned
+- [Raid: A Tool for Orchestrating Distributed Application Development](https://www.alexsalerno.dev/blog/raid-design-proposal) — the original design proposal
 
-   `cd 8bitalex.github.io`
+## About this site (tech stack)
 
-3. Install dependencies:
+Built with **Next.js** (App Router) + **TypeScript** + **Tailwind**, long-form content in **MDX**, hosted on **Cloudflare Pages**, instrumented with **PostHog**. Open-source under the [LICENSE](./LICENSE) — fork it if you want a starting point for your own.
 
-   `npm install`
+## Run locally
 
-4. Run the development server:
+```bash
+git clone https://github.com/8bitAlex/8bitalex.github.io.git
+cd 8bitalex.github.io
+npm install
+npm run dev      # http://localhost:3000
+```
 
-   `npm run dev`
+## Repo layout
 
-5. Open http://localhost:3000 to view it in your browser.
+- `src/app/` — Next.js routes (App Router). Blog posts under `src/app/blog/<slug>/page.mdx`, projects under `src/app/projects/<slug>/page.mdx`.
+- `src/components/` — UI primitives, layout blocks, MDX components.
+- `src/lib/` — Shared utilities, including the MDX loader.
+- `public/` — Static assets (images, icons, fonts).
 
-## Connect with Me
+## Contact
 
-GitHub: https://github.com/8bitAlex
-
-LinkedIn: https://www.linkedin.com/in/8bitalex/
+- **GitHub** — [@8bitAlex](https://github.com/8bitAlex)
+- **LinkedIn** — [linkedin.com/in/8bitalex](https://www.linkedin.com/in/8bitalex/)
+- **Bluesky** — [@8bitalex.bsky.social](https://bsky.app/profile/8bitalex.bsky.social)
