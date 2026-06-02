@@ -34,7 +34,7 @@ The blog is where I write about engineering decisions and retrospectives in long
 
 ## About this site (tech stack)
 
-Built with **Next.js** (App Router) + **TypeScript** + **Tailwind**, long-form content in **MDX**, hosted on **Cloudflare Pages**, instrumented with **PostHog**. Open-source under the [LICENSE](./LICENSE) — fork it if you want a starting point for your own.
+Built with **Next.js** (App Router) + **TypeScript** + **Tailwind**, long-form content in **MDX**, hosted on **Cloudflare Pages**, instrumented with **PostHog** and **Google Analytics**. Open-source under the [LICENSE](./LICENSE) — fork it if you want a starting point for your own.
 
 ## Run locally
 
