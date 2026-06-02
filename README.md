@@ -17,7 +17,7 @@ These days I'm building [**Raid**](https://github.com/8bitAlex/raid) — an open
 
 ## Featured work
 
-See on my website at [/projects](https://www.alexsalerno.dev/projects).
+See more on my website at [/projects](https://www.alexsalerno.dev/projects).
 
 ## Recent writing
 
