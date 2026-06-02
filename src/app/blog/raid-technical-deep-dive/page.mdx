@@ -1,0 +1,308 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  icon: faGears,
+  date: '2026-06-01',
+  title: 'Building Raid: A Technical Deep Dive',
+  description:
+    'A year after the design proposal, an honest retrospective on _Raid_ — the multi-repo workflow orchestrator I built to escape my own toil. Architecture, key design decisions (including agent-native MCP integration), what got cut, and what I learned along the way.'
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description
+}
+
+A year ago I [published a design proposal](/blog/raid-design-proposal) for _Raid_ — an open-source command-line tool for orchestrating distributed development workflows. Since then I've shipped twenty-something releases, integrated it with AI agents, added opt-in telemetry, and used it daily on my own multi-repo projects. With v1.0 within reach, this post is the technical retrospective: what got built, the design choices that turned out to matter, and a few honest admissions about what I'd do differently.
+
+If the design proposal was the "what" and the "why," this is the "how."
+
+## The Problem (a quick recap)
+
+The original pain came from my time at Workday. The work spanned multiple repositories — individual services and a large monorepo — and there were enough people merging changes daily that local environments were perpetually drifting out of sync. Setting up a remote test VM, patching a service against a hotfix branch, swapping config to point at a sandbox, running tests across more than one repo at a time — each of these involved tracking down a half-remembered shell script in someone's `bin/` folder, or asking on Slack.
+
+I started writing a small internal TypeScript script runner to centralize the tribal knowledge. Over a few years it grew into something genuinely useful — but only for our team's specific stack. Eventually I extracted the design ideas, rewrote it in Go, and released the open-source version while still at Workday. We killed the internal app and switched our team over to the open-source one. After I left, I kept building on it — most of what's in _Raid_ today came after that.
+
+_Raid_ is what came out of that.
+
+## A quick note on the name
+
+Some people love the name, some don't, and a few have pointed out — fairly — that it collides with the storage acronym. It came from two places. I'm a fan of Norse history, and there's something satisfying about the framing: each command you run is a small raid against the workspace — in, out, mission complete. It's also a play on Raid the bug spray, which is doubly fitting for a developer tool. I thought it was funny. Sometimes that's reason enough.
+
+## Design Goals
+
+A few principles drove every meaningful design call:
+
+- **Declarative over imperative.** A profile should describe the desired state of a workspace — repositories, environments, commands — not a sequence of steps to get there. Steps belong inside individual tasks; the workspace itself is configuration.
+- **Multi-repo as a first-class concept.** Most workflow tools assume one repo. _Raid_ assumes many, and treats repository state as something to orchestrate, not assume.
+- **Agent-friendly by default, not retrofitted.** Every command, environment, and resource is exposed through a [Model Context Protocol](https://modelcontextprotocol.io/) server. Agents can read workspace state, run commands, and see the same view of the world a human would.
+- **Opt-in telemetry, no surprises.** No event leaves the user's machine until they explicitly say yes. The first-run prompt explains exactly what gets sent. `raid telemetry preview` shows the literal JSON payload.
+- **Single binary, no daemon.** _Raid_ is a Go CLI. There is no background service, no IPC layer, no required cloud component. You run it, it does the work, it exits.
+- **Cross-platform without compromise.** macOS, Linux, Windows — same YAML, same behaviors. Platform-specific bits live inside task conditions, not at the configuration root.
+
+## What Already Existed (and Why It Wasn't Enough)
+
+I wasn't trying to replace any of the tools below — they're each good at what they do. _Raid_ exists because none of them were the right shape for the problem I had.
+
+| Tool | What it's great at | Why it wasn't enough |
+|---|---|---|
+| **Make** | Universal, simple, single repo | Single repo, no env/profile concept, syntax is hostile, no agent surface |
+| **Just** | Better Make, ergonomic recipe DSL | Same single-repo model; doesn't persist config; can't compose declarative workflows |
+| **Task** | Cross-platform YAML task runner | YAML is in the right family, but it's still single-repo and lacks the env/profile dimension |
+| **Nx / Turborepo** | Excellent for JavaScript monorepos | Monorepo-centric; opinionated about JS tooling; heavyweight for non-JS work |
+| **mise / asdf** | Tool version management + tasks | Solves a different problem (toolchain pinning); the task runner is secondary |
+| **Loose shell scripts** | Maximum flexibility | Scattered across repos and `~/bin/`; require tribal knowledge; no schema, no introspection, no agent surface |
+
+The closest cousin in spirit is **mise**, but mise centers on toolchain management with tasks bolted on. _Raid_ centers on the workflow itself, with the toolchain assumed.
+
+The core gap was the same across all of these: I needed something that could persist configuration across runs, run arbitrary programs and scripts, hold multiple repositories in mind at once, and be introspectable enough that an LLM could reason about it. Nothing on the shelf hit all four.
+
+## Architecture Overview
+
+_Raid_ has three layers, with two interfaces sitting on top of the runtime.
+
+<div style={{margin: '2rem 0', textAlign: 'center'}}>
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
+  <defs>
+    <style>{`
+      .box { fill: #fafafa; stroke: #111; stroke-width: 1.5; }
+      .layer { fill: #f4f4f4; stroke: #888; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 14px -apple-system, sans-serif; fill: #111; }
+      .lbl-sm { font: 500 11px -apple-system, sans-serif; fill: #444; }
+      .lbl-layer { font: 600 11px -apple-system, sans-serif; fill: #666; text-transform: uppercase; letter-spacing: 0.06em; }
+      .arrow { stroke: #111; stroke-width: 1.5; fill: none; marker-end: url(#arr); }
+    `}</style>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#111" />
+    </marker>
+  </defs>
+
+  <rect className="layer" x="20" y="20" width="680" height="70" rx="6" />
+  <text className="lbl-layer" x="34" y="42">Interfaces</text>
+  <rect className="box" x="120" y="50" width="200" height="30" rx="4" />
+  <text className="lbl" x="220" y="70" textAnchor="middle">CLI (cobra)</text>
+  <rect className="box" x="400" y="50" width="200" height="30" rx="4" />
+  <text className="lbl" x="500" y="70" textAnchor="middle">MCP Server</text>
+
+  <rect className="layer" x="20" y="110" width="680" height="140" rx="6" />
+  <text className="lbl-layer" x="34" y="132">Runtime (Go)</text>
+  <rect className="box" x="60" y="150" width="140" height="80" rx="4" />
+  <text className="lbl" x="130" y="180" textAnchor="middle">Profile</text>
+  <text className="lbl-sm" x="130" y="200" textAnchor="middle">Manager</text>
+  <rect className="box" x="220" y="150" width="140" height="80" rx="4" />
+  <text className="lbl" x="290" y="180" textAnchor="middle">Repository</text>
+  <text className="lbl-sm" x="290" y="200" textAnchor="middle">Manager</text>
+  <rect className="box" x="380" y="150" width="140" height="80" rx="4" />
+  <text className="lbl" x="450" y="180" textAnchor="middle">Environment</text>
+  <text className="lbl-sm" x="450" y="200" textAnchor="middle">Manager</text>
+  <rect className="box" x="540" y="150" width="140" height="80" rx="4" />
+  <text className="lbl" x="610" y="180" textAnchor="middle">Task</text>
+  <text className="lbl-sm" x="610" y="200" textAnchor="middle">Executor</text>
+
+  <rect className="layer" x="20" y="270" width="680" height="70" rx="6" />
+  <text className="lbl-layer" x="34" y="292">Configuration</text>
+  <rect className="box" x="120" y="300" width="200" height="30" rx="4" />
+  <text className="lbl" x="220" y="320" textAnchor="middle">profile/*.raid.yaml</text>
+  <rect className="box" x="400" y="300" width="200" height="30" rx="4" />
+  <text className="lbl" x="500" y="320" textAnchor="middle">repo/raid.yaml</text>
+
+  <path className="arrow" d="M220 90 L220 145" />
+  <path className="arrow" d="M500 90 L500 145" />
+  <path className="arrow" d="M220 295 L220 235" />
+  <path className="arrow" d="M500 295 L500 235" />
+</svg>
+</div>
+
+The interfaces — CLI and MCP — both call into the same Go runtime; everything an agent can do, a human can do, and vice versa. The runtime is composed of four managers, each owning one concern. Configuration is declarative YAML, validated against a JSON Schema. There is no daemon, no shared state, no remote dependency. A `raid` invocation reads YAML, builds an in-memory model, executes, and exits.
+
+## The Mental Model
+
+Once you understand the four-level hierarchy, the rest of _Raid_ is mechanical:
+
+```
+Profile (e.g. "team")
+├── Repositories (one or more)
+│   ├── url, branch, path
+│   ├── install: tasks…
+│   └── commands: (repo-scoped)
+├── Environments (dev, staging, prod, …)
+│   └── per-repo .env files
+└── Commands (profile-scoped)
+    └── tasks: (typed primitives)
+        ├── Shell · Script · HTTP · Wait
+        ├── Group (sequential or parallel)
+        ├── Git · Template · Set
+        └── Prompt · Confirm · Print
+```
+
+A **Profile** groups repositories, environments, and commands into a coherent workspace. **Commands** are named, reusable workflows. **Tasks** are the typed primitives commands compose from. Importantly, commands can be defined at both the profile level (`team patch`) and the repo level (`api patch`) — when the names collide, calling `raid patch` runs the profile's version, and `raid api patch` runs the repo's. That distinction matters more than it sounds: it's what lets a team share a "patch this hotfix" command at the profile level while letting individual services override the parts they need to.
+
+## Key Design Decisions
+
+### YAML, and declarative
+
+YAML is easy to read. That's almost the whole argument. TOML doesn't nest well past two levels. HCL is excellent but the tooling story outside HashiCorp is thin. A scripting DSL (Just-style recipes, or a Lua/Starlark embedded language) would have been more expressive but would also have made the configuration something you write instead of something you describe — and that distinction is the point.
+
+A declarative profile is portable: I can hand you my `team.raid.yaml`, you can read it top to bottom without running anything, and you'll know exactly what workspace it describes. An imperative script is a black box until executed.
+
+The cost is that some workflows that would be three lines of bash are five lines of YAML. I accept that trade.
+
+### Tasks as typed primitives
+
+Inside a command, tasks are the unit of work. They're typed:
+
+```yaml
+commands:
+  - name: deploy-preview
+    tasks:
+      - type: Shell
+        cmd: npm run build
+        path: ./web
+      - type: Wait
+        url: http://localhost:3000/healthz
+        timeout: 30s
+      - type: Confirm
+        prompt: "Promote to staging?"
+      - type: HTTP
+        method: POST
+        url: ${STAGING_DEPLOY_HOOK}
+```
+
+There are eleven task types today: `Shell`, `Script`, `HTTP`, `Wait`, `Template`, `Group`, `Git`, `Prompt`, `Confirm`, `Set`, `Print`. Together they're enough to model 90+% of the workflows I've encountered, without making _Raid_ a programming language. The remaining 10% drops back to `Shell` and `Script`, which is the right escape hatch.
+
+`Group` is worth calling out specifically — it nests tasks under a single logical step, supports `parallel: true` for concurrent execution, and accepts retry parameters (`attempts`, `delay`). That single primitive unlocks parallel test suites, concurrent service startup, and resilience to transient network failures.
+
+### Agent-native via MCP
+
+This one wasn't in the original design proposal. It emerged from using _Raid_ alongside Claude and other agents — I kept finding myself describing the workspace to the agent verbally ("we have three repos, the API is on port 8001, run `npm test` in the web dir…") when all of that information was already in my `raid.yaml`. The fix was to expose it.
+
+The MCP server is a `raid context serve` subcommand. It registers six read-only resources and six tools, mirroring the same hierarchy a human would navigate:
+
+```
+Resources (read-only state the agent inspects)
+  raid://workspace/profile     active profile name
+  raid://workspace/env         active environment
+  raid://workspace/repos       repos + live git state
+  raid://workspace/commands    user-defined commands
+  raid://workspace/recent      recent invocations (capped 10)
+  raid://workspace/vars        persisted variables
+
+Tools (operations the agent can invoke)
+  raid_list_profiles
+  raid_list_repos
+  raid_describe_repo
+  raid_install
+  raid_env_switch
+  raid_run_task
+```
+
+The symmetry is intentional. Read surfaces describe state; tool surfaces change it. The agent doesn't need to learn _Raid_'s YAML schema or its CLI flags — it asks the server what's available, picks a command, and invokes it. Output streams back as the tool result, so the agent sees what the human would see.
+
+The benefit isn't just that agents become more competent inside a _Raid_ workspace. It's that **the user sees what the agent did**, because anything the agent runs goes through the same recent-commands log a human would consult. The MCP integration is as much about transparency as it is about capability.
+
+Commands can also carry an optional `agent:` metadata block:
+
+```yaml
+commands:
+  - name: reset-db
+    agent:
+      safe: false             # destructive, don't auto-run
+      reads: [./db/schema.sql]
+    tasks: [...]
+```
+
+`safe: false` tells the agent not to invoke this without explicit confirmation, even if it has the capability. Small thing, big trust dividend.
+
+### Opt-in telemetry, transparently
+
+This one matters to me as a matter of ethics. Companies do sleezy sneaky things in apps without asking the user, and I don't want to add to that. _Raid_'s telemetry is **off by default**. The first time you run any command, you see a one-screen explanation of what would be collected (event name, version, OS, arch, anonymous machine ID — no command args, no file paths, no env values, no stdout) and a `[y/N/?]` prompt with `?` opening the long disclosure. The default answer is **No**.
+
+If you say yes, future runs send a small set of events. If you say no, no anonymous ID is even generated, no network calls are made, and nothing is queued. The `DO_NOT_TRACK=1` environment variable is honored as a hard kill switch regardless of stored consent. Three new subcommands — `raid telemetry on|off|status|purge|preview` — give you full visibility and control. `preview` literally prints the JSON body that would be sent, so you can audit exactly what's leaving your machine before agreeing to anything.
+
+The implementation cost was real (a few hundred lines of consent state machine, prompt handling, async send with timeout, graceful degradation when the build has no API key baked in). The trust dividend was worth it. I'd rather have ten consenting users than a thousand non-consenting ones.
+
+## Anatomy of a Real Workflow
+
+Here's the actual `test` command from _Raid_'s own `raid.yaml` — a single profile-level command that builds and tests the Go app and the Docusaurus docsite in sequence:
+
+```yaml
+commands:
+  - name: test
+    usage: Build and run all tests for the raid app and docsite
+    tasks:
+      - type: Print
+        message: "==> Building raid app"
+        color: cyan
+      - type: Shell
+        name: Build raid app
+        cmd: go build ./...
+        path: ~/Developer/raid
+      - type: Print
+        message: "==> Testing raid app"
+        color: cyan
+      - type: Shell
+        name: Test raid app
+        cmd: go test ./...
+        path: ~/Developer/raid
+      - type: Print
+        message: "==> Building docsite"
+        color: cyan
+      - type: Shell
+        name: Build docsite
+        cmd: npm install && npm run build
+        path: ~/Developer/raid/site
+      # … (etc.)
+```
+
+`raid test` runs the whole sequence; each `Shell` task's working directory is locally scoped via `path`, so the command doesn't care where it was invoked from. `Print` tasks give the output structure without polluting the actual command output. Failures preserve the underlying subprocess exit code, so CI gets a real signal.
+
+The same command works on macOS, Linux, and Windows (with appropriate platform conditions where needed), runs the same way for me on my laptop as it does in the agent-webhook auto-review pipeline, and would work for any contributor who clones the repo and runs `raid install`.
+
+There is no `Makefile`. There is no `scripts/` directory full of `.sh` files. The workflow lives in one YAML, alongside the code, version-controlled, schema-validated, and introspectable by an agent.
+
+## Implementation Notes
+
+A handful of concrete choices worth recording:
+
+- **Language: Go.** Single static binary, fast startup, mature concurrency primitives, easy cross-compilation. The CLI starts in single-digit milliseconds, which matters when you're invoking it dozens of times a day.
+- **CLI framework: cobra + viper.** Standard pairing; cobra handles command tree + flag parsing + help generation, viper handles config layering.
+- **MCP SDK: `mark3labs/mcp-go`.** The most mature Go MCP server library when the work started.
+- **YAML: a strict JSON Schema validation pass.** Bad profiles fail fast with a clear error pointing at the offending field, not with a runtime panic deep inside task execution.
+- **Releases: GoReleaser.** Cross-platform artifact builds, checksums, and Homebrew tap publishing in one declarative config (`.goreleaser.yaml`). A separate `.goreleaser.preview.yaml` ships pre-release versions to a `raid-preview` formula in the same tap.
+- **Distribution: a Homebrew tap (`8bitalex/tap`)** with both `raid` and `raid-preview` formulas. `brew install 8bitalex/tap/raid` is the canonical install path.
+- **CI: GitHub Actions.** Build + test + lint on PR; release pipeline on tag.
+- **Tests: ~80% coverage on the core runtime**, much lower on integration paths because end-to-end testing a multi-repo orchestrator is its own project.
+
+The deliberate non-choice: **no plugin system, yet.** Plugin architectures look great on paper and demand maintenance forever. The current task-type list is the right level of abstraction for now; if a real workflow needs something `Shell` can't do, it gets added as a typed task.
+
+## What I'd Do Differently
+
+Two things, with hindsight:
+
+**Add metrics earlier.** I shipped the first usable version without any telemetry at all, because I wanted to think carefully about consent. I thought carefully for too long. The result was that I had no idea how anyone was actually using _Raid_ — which task types they hit most, which commands they ran, where they got stuck. By the time the consent model was right, I'd lost months of behavioral data on the early adopters. The lesson: design the consent model and the telemetry payload in parallel from the start; don't ship the tool without the means to learn from it.
+
+**Spend less time on the "right" data format debate.** YAML vs TOML vs HCL took a week of internal debate. None of it mattered. Any of those formats would have worked. The decisions that actually shaped the tool — the four-layer hierarchy, the typed task primitives, MCP integration, the consent model — got less deliberation by absolute time and turned out to matter more.
+
+And one thing that turned out harder than I expected: **getting people to actually use the app.** Even when _Raid_ demonstrably saves toil, developers are conservative about adopting new infrastructure into their workflow. I'm not a great marketer. So _Raid_'s growth right now is word-of-mouth and the value proposition speaking for itself, which is slower than I'd like but probably the only honest path for a tool of this kind.
+
+## The Road to v1.0
+
+The remaining work is small and concrete:
+
+- **Manual happy-path test plan.** I have a written walk-through of every shipped feature, exercised end-to-end on a clean machine. I'm working through it linearly. When every checkbox is ticked, v1.0 ships.
+- **A short polish pass** on error messages and the `raid doctor` output.
+- **A `v1-beta` label** is already attached to the open issues that are explicitly scoped into v1.
+
+Anything not on that short list is intentionally deferred to a v1.1+ window — including a plugin system, a managed cloud component, and "fancy" features like dependency graphs across repos. The goal for v1.0 is stability, not feature surface.
+
+## Closing
+
+_Raid_ exists because I got tired of remembering things that shouldn't have to be remembered. Where the local environment file lives. Which port the staging API is on. What the magic `npm` incantation is to reset the dev database. Which two shell scripts have to run before `make test` will actually work. None of that is engineering — it's friction. Tools are supposed to remove friction.
+
+The agent-native angle wasn't planned, but it turns out the same properties that make _Raid_ pleasant for humans — declarative, introspectable, typed, transparent — make it ideal for agents. That's not coincidence. Agents and humans both benefit from systems that explain themselves.
+
+If you maintain anything across more than one repository, I'd love it if you tried it. Feedback, issues, and PRs are all welcome at [github.com/8bitAlex/raid](https://github.com/8bitalex/raid). And if you happen to be working on similar problems, I'd genuinely like to compare notes — there's more interesting design space here than I can explore alone.
+
+v1.0 lands when the test plan is green. Soon.
