@@ -17,13 +17,7 @@ These days I'm building [**Raid**](https://github.com/8bitAlex/raid) — an open
 
 ## Featured work
 
-| Project | What it is |
-|---|---|
-| [**Raid**](https://github.com/8bitAlex/raid) | Open-source Go CLI for orchestrating multi-repo dev workflows. Declarative YAML, typed task primitives, MCP integration for AI agents. → [Technical deep dive on the blog](https://www.alexsalerno.dev/blog/raid-technical-deep-dive) |
-| [**Alderman**](https://github.com/8bitAlex/Alderman-API) | Civic-tech project surfacing public-meeting information from local government. ([API](https://github.com/8bitAlex/Alderman-API) · [Web](https://github.com/8bitAlex/Alderman-Web)) |
-| [**Pixelated Realms**](https://pixelatedrealms.com/) | Weekly video-game podcast I co-host. |
-
-More under [/projects](https://www.alexsalerno.dev/projects).
+See more on my website at [/projects](https://www.alexsalerno.dev/projects).
 
 ## Recent writing
 
