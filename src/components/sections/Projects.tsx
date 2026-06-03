@@ -8,6 +8,30 @@ import React from 'react'
 import { QuoteBanner } from '../blocks/QuoteBanner'
 import Section from '../layout/Section'
 
+// Stable per-project slug derived from the project's href (/projects/<slug>).
+// Used both as the anchor target on the section card and as the link href in
+// the quick-links row, so clicking a chip scrolls down to the project.
+function projectSlug(project: Project): string {
+  return project.href.replace(/^\/projects\//, '').replace(/\/$/, '')
+}
+
+function QuickLinks({ projects }: { projects: Project[] }) {
+  if (projects.length === 0) return null
+  return (
+    <div className="mt-6 flex flex-wrap gap-2">
+      {projects.map((p) => (
+        <a
+          key={p.title}
+          href={`#${projectSlug(p)}`}
+          className="inline-flex items-center rounded-full border border-neutral-300 px-4 py-1.5 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 hover:bg-neutral-950 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950"
+        >
+          {p.title}
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function ProjectDetails({
   project,
   shape,
@@ -18,7 +42,7 @@ function ProjectDetails({
   children?: React.ReactNode
 }) {
   return (
-    <div className="group/section [counter-increment:section]">
+    <div id={projectSlug(project)} className="group/section scroll-mt-24 [counter-increment:section]">
       <div className="lg:flex lg:items-center lg:justify-end lg:gap-x-8 lg:group-even/section:justify-start xl:gap-x-20">
         <div className="flex justify-center">
           <FadeIn className="w-[33.75rem] flex-none lg:w-[45rem]">
@@ -68,39 +92,28 @@ function ProjectDetails({
   )
 }
 
-export async function Projects() {
-  const projects = await loadProjects()
-
+function ProjectsList({ projects }: { projects: Project[] }) {
   return (
     <div className="mt-18 space-y-18 [counter-reset:section]">
-      {projects
-        .sort((a, b) => a.order - b.order)
-        .map((project, idx) => {
-          return (
-            <ProjectDetails project={project} key={project.title} shape={(idx % 3) as 0 | 1 | 2}>
-              {project.abstract}
-            </ProjectDetails>
-          )
-        })}
+      {projects.map((project, idx) => (
+        <ProjectDetails project={project} key={project.title} shape={(idx % 3) as 0 | 1 | 2}>
+          {project.abstract}
+        </ProjectDetails>
+      ))}
     </div>
   )
 }
 
-export default function ProjectSection() {
+export default async function ProjectSection() {
+  const projects = (await loadProjects()).sort((a, b) => a.order - b.order)
   return (
     <div>
       <Section
         eyebrow="Projects"
         title="A Curated Collection of My Projects and Related Documentation."
-        description={
-          <>
-            <Button href="https://trello.com/b/LqyE5lHq/project-tracking" className="mt-6">
-              Projects Tracker
-            </Button>
-          </>
-        }
+        description={<QuickLinks projects={projects} />}
       >
-        <Projects />
+        <ProjectsList projects={projects} />
       </Section>
       <QuoteBanner author={{ name: 'Guy Kawasaki' }}>Ideas are easy. Implementation is hard</QuoteBanner>
     </div>
