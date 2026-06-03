@@ -23,7 +23,7 @@ function QuickLinks({ projects }: { projects: Project[] }) {
         <a
           key={p.title}
           href={`#${projectSlug(p)}`}
-          className="inline-flex items-center rounded-full border border-neutral-300 px-4 py-1.5 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 hover:bg-neutral-950 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950"
+          className="inline-flex items-center rounded-full border border-neutral-300 px-4 py-1.5 text-sm font-medium text-neutral-950 transition hover:border-neutral-950 hover:bg-neutral-950 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950"
         >
           {p.title}
         </a>
@@ -102,11 +102,6 @@ function ProjectsList({ projects }: { projects: Project[] }) {
       ))}
     </div>
   )
-}
-
-export async function Projects() {
-  const projects = (await loadProjects()).sort((a, b) => a.order - b.order)
-  return <ProjectsList projects={projects} />
 }
 
 export default async function ProjectSection() {
