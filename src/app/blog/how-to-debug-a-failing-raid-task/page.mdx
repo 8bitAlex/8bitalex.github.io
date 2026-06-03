@@ -1,0 +1,185 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Debug a Failing Raid Task',
+  description:
+    'Diagnose Raid failures fast: read the exit-code category, decode the structured error envelope, use `raid context`, and apply per-task `continueOnFailure` for noisy steps.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'debug', 'troubleshooting', 'exit codes',
+    'structured errors', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-debug-a-failing-raid-task' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+When a `raid` command fails, the first instinct is usually to scroll up looking for a stack trace. Raid is more disciplined than that: every failure carries a category, an error code, a message, and often a hint. This guide walks through reading them, common categories of failure, and a few flags that help isolate the cause.
+
+## 1. Read the exit code first
+
+Raid maps failures to five categorical exit codes. They tell you *what kind* of thing went wrong without reading any logs:
+
+| Exit code | Category   | Typical cause                                                |
+| --------- | ---------- | ------------------------------------------------------------ |
+| 1         | Generic    | Unclassified — fall-through; treat as bug report material    |
+| 2         | Config     | Invalid profile / repo YAML / argument                       |
+| 3         | Task       | A user task failed (shell exit non-zero, prompt missing default, wait timeout) |
+| 4         | Network    | Clone failed, HTTP task failed                               |
+| 5         | Not Found  | Profile / env / command / repo / file missing                |
+
+Print `$?` (POSIX) / `$LASTEXITCODE` (PowerShell) right after the failed run to see it. The category alone narrows the cause to one of five buckets.
+
+## 2. Decode the structured error
+
+Raid surfaces a typed error object. In text mode it prints a prose line:
+
+```
+Error: profile 'web-platform' not found (PROFILE_NOT_FOUND)
+Hint: use 'raid profile list' to see available profiles
+```
+
+In `--json` mode it emits a stable envelope:
+
+```json
+{
+  "error": {
+    "code": "PROFILE_NOT_FOUND",
+    "category": "not-found",
+    "message": "profile 'web-platform' not found",
+    "hint": "use 'raid profile list' to see available profiles"
+  }
+}
+```
+
+`code` is the most stable identifier — assert on it in scripts. `hint` is the fastest path to the fix.
+
+## 3. Common failure codes and how to react
+
+| Code                          | Category | Where it comes from                                  | Likely fix                                                |
+| ----------------------------- | -------- | --------------------------------------------------- | --------------------------------------------------------- |
+| `PROFILE_INVALID`             | Config   | Profile file failed schema validation               | Check the `# yaml-language-server` errors in your editor  |
+| `PROFILE_NOT_ACTIVE`          | Not Found| No profile is active                                | `raid profile list` then `raid profile <name>`            |
+| `PROFILE_NOT_FOUND`           | Not Found| Named profile isn't registered                      | `raid profile list` to confirm; re-add if missing         |
+| `REPO_NOT_CLONED`             | Not Found| Command needs a repo that's not on disk             | `raid install` or `raid install <repo>`                   |
+| `COMMAND_NOT_FOUND`           | Not Found| `raid foo` and no `foo` command exists              | `raid --help` for the actual list                         |
+| `ENV_NOT_FOUND`               | Not Found| `raid env staging` but no `staging` env defined     | `raid env list` to confirm naming                          |
+| `TASK_SHELL_FAILED`           | Task     | A `Shell` task exited non-zero                       | Read the shell's own stderr; that's where the real cause is |
+| `TASK_WAIT_TIMEOUT`           | Task     | `Wait` task exhausted its `timeout:`                | The dependency isn't coming up — check it directly        |
+| `HEADLESS_PROMPT_NO_DEFAULT`  | Task     | Headless mode hit a Prompt without a `default:`     | Add a `default:` or set the var via env before running    |
+| `CLONE_FAILED`                | Network  | Git couldn't clone a repo                            | SSH key, repo URL, or network                             |
+| `TASK_HTTP_FAILED`            | Network  | `HTTP` task got a non-2xx or couldn't reach the URL | URL right? Auth right? Service up?                        |
+| `SCHEMA_VALIDATION_FAILED`    | Config   | YAML doesn't match the published schema             | Editor LSP usually pinpoints the line                     |
+
+The full list is more — but these cover the majority of day-to-day failures.
+
+## 4. Inspect the workspace state
+
+When the cause isn't immediately obvious from the error, dump the current state:
+
+```bash
+raid context --json | jq .
+```
+
+That returns active profile, active env, every repo with its git state (branch, dirty?), and recently-run commands. Half the "why doesn't this work" failures resolve here:
+
+- The repo isn't cloned (`repos[*].cloned` is false).
+- It's on the wrong branch (`repos[*].branch`).
+- Local edits are blocking a checkout (`repos[*].dirty` is true).
+- The env isn't what you thought it was.
+
+For agent-driven debug, `raid context serve` gives the same data over MCP — see [How to use Raid as an MCP server](/blog/how-to-use-raid-as-an-mcp-server).
+
+## 5. Re-run with more output
+
+A failing `Shell` task already passes its stderr through. If you need more from Raid itself:
+
+- **`--json`** — emits the error envelope verbatim, including all detail fields (not all of which print in text mode).
+- **Re-run the failing shell directly.** Find the `cmd:` in the YAML, change into the repo, and run it. If the bug reproduces, it's not Raid — it's the underlying tool.
+- **Run a single task in isolation.** Comment out the surrounding tasks in the command and re-run. Once you've isolated the failing task, the cause is usually obvious.
+
+## 6. Tolerate expected failures
+
+Sometimes a step is allowed to fail — a clean-up command that may or may not have anything to clean, a probe that's informational. Mark the task `continueOnFailure: true` so the command keeps going:
+
+```yaml
+- type: Shell
+  cmd: rm -rf ./.cache
+  options:
+    continueOnFailure: true
+```
+
+The task's failure is logged but doesn't abort the command. The command's overall exit code is still 0 if everything else succeeded.
+
+Don't use this to paper over real bugs — but for genuinely best-effort steps, it's the right tool.
+
+## 7. Headless / CI debugging
+
+A few flags help when you're staring at a CI log instead of a live terminal:
+
+- **`--json`** — easier to grep than prose.
+- **`RAID_NO_PREFIX=1`** — drops the `[task-name]` prefix on concurrent output so plain logs are easier to read.
+- **Bisect via `--threads 1`** — for `raid install`, reduce clone parallelism to 1 to make logs strictly sequential.
+
+## 8. When it's actually a Raid bug
+
+If you've checked the code, the error message is wrong or misleading, and `raid context` shows expected state, you've probably hit a Raid bug. Open an issue at [github.com/8bitAlex/raid/issues](https://github.com/8bitAlex/raid/issues) with the error code, the exit code, and a minimal `raid.yaml` that reproduces it.
+
+## Next steps
+
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — the flags that complement debugging in CI.
+- [How to Use Raid as an MCP Server for AI Agents](/blog/how-to-use-raid-as-an-mcp-server) — get an agent to inspect the workspace state for you.
+- [Raid technical deep dive](/blog/raid-technical-deep-dive) — the underlying error model.

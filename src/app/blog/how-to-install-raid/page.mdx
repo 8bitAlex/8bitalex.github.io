@@ -1,0 +1,163 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Install Raid on macOS, Linux, and Windows',
+  description:
+    'Install the Raid CLI on macOS, Linux, or Windows — stable and preview channels, verifying the install, upgrading, and uninstalling.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'install Raid', 'raid CLI install', 'macOS Homebrew',
+    'Linux install script', 'Windows CLI', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-install-raid' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-install-raid',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-install-raid#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-install-raid',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-install-raid' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', operatingSystem: 'macOS, Linux, Windows', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-install-raid' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+The Raid CLI ships as a single static binary for macOS, Linux, and Windows. This guide covers the recommended install path on each, plus the preview channel for early access and how to upgrade or uninstall.
+
+## 1. macOS — Homebrew
+
+```bash
+brew install 8bitalex/tap/raid
+```
+
+That adds the `8bitalex` tap and installs `raid` to `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel).
+
+## 2. Linux — install script
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/8bitalex/raid/main/install.sh | bash
+```
+
+The script detects your architecture (amd64 or arm64), downloads the matching release binary, and drops it in `/usr/local/bin`. Read it before piping if your security posture requires it — it's plain bash and lives in the repo.
+
+## 3. Windows — release zip
+
+1. Open the [latest release](https://github.com/8bitalex/raid/releases/latest).
+2. Download `raid_<version>_windows_amd64.zip`.
+3. Extract — you'll find `raid.exe` inside.
+4. Move `raid.exe` to a folder on your `PATH` (a common choice: `C:\Program Files\raid\`).
+5. If that folder isn't already on `PATH`, add it: **Settings → System → About → Advanced system settings → Environment Variables → Path → Edit → New** → paste the folder path.
+6. Open a new terminal window so the updated `PATH` takes effect.
+
+## 4. Verify
+
+On any platform:
+
+```bash
+raid --version
+```
+
+You should see a version string like `raid 1.x.y`. If the shell can't find `raid`, your installer didn't land it on `PATH`.
+
+## 5. Preview channel
+
+Want the latest features before they ship to stable? The preview channel is a parallel install that receives updates ahead of stable and may include experimental functionality.
+
+```bash
+# macOS / Linux
+brew install 8bitalex/tap/raid-preview
+```
+
+`raid-preview` installs alongside `raid` — same commands, different binary. Use it for testing without losing your stable install.
+
+## 6. Upgrade
+
+**Homebrew (macOS / Linux):**
+
+```bash
+brew upgrade raid
+# or for preview:
+brew upgrade raid-preview
+```
+
+**Linux install script:** re-run the same `curl ... | bash` line — it overwrites with the latest release.
+
+**Windows:** download the newer zip and replace the existing `raid.exe`.
+
+## 7. Uninstall
+
+**Homebrew:**
+
+```bash
+brew uninstall raid
+brew untap 8bitalex/tap   # optional, removes the tap entirely
+```
+
+**Linux install script:**
+
+```bash
+sudo rm /usr/local/bin/raid
+```
+
+**Windows:** delete `raid.exe` and (if you don't use it for anything else) remove its folder from `PATH`.
+
+## 8. What gets installed where
+
+| Item                                | macOS / Linux                  | Windows                        |
+| ----------------------------------- | ------------------------------ | ------------------------------ |
+| `raid` binary                       | `/usr/local/bin` or `/opt/homebrew/bin` | wherever you placed `raid.exe` |
+| Registered profiles (state)         | `~/.raid/config.yaml`          | `%USERPROFILE%\.raid\config.yaml` |
+| Persisted variables                 | `~/.raid/vars`                 | `%USERPROFILE%\.raid\vars`     |
+| Cloned repos                        | wherever the profile says      | wherever the profile says      |
+
+Profile state lives in your home directory, so reinstalling `raid` doesn't lose your configuration. Conversely, removing the binary doesn't clean up `~/.raid/` — delete that folder if you want a clean slate.
+
+## Next steps
+
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — the first thing to do after installing.
+- [How to Clone All Your Team's Repos with `raid install`](/blog/how-to-clone-all-your-team-repos-with-raid-install) — the bootstrap command you'll run next.

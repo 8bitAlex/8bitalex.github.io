@@ -1,0 +1,217 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Wire Raid into CI',
+  description:
+    'Run Raid in CI without prompts or hangs: `--yes` / `--headless` flags, `--json` output, exit-code categories, and patterns for GitHub Actions and friends.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'CI', 'continuous integration', 'GitHub Actions',
+    'headless mode', 'exit codes', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-wire-raid-into-ci' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+The same `raid <command>` your developers run locally should run unchanged in CI. The trick is silencing the prompts, structuring the output, and reading the exit code categorically. Raid has dedicated knobs for each.
+
+## 1. The flags you'll use
+
+Three global flags cover the bulk of CI use:
+
+| Flag                     | Purpose                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------- |
+| `--yes` / `--headless`   | Auto-resolve interactive prompts. Confirm tasks auto-accept; Prompt tasks use `default:` (or fail). |
+| `--json`                 | Emit structured JSON for commands that support it (profile/env list, doctor, context, error envelopes). |
+| `-t N` / `--threads N`   | Cap concurrent clones during `raid install`.                                    |
+
+Two environment variables that do the same job for tools that prefer env over flags:
+
+| Env var           | Effect                                                              |
+| ----------------- | ------------------------------------------------------------------- |
+| `RAID_HEADLESS=1` | Equivalent to `--yes` / `--headless`.                              |
+| `DO_NOT_TRACK=1`  | Suppresses the first-run telemetry opt-in prompt (you'd want this in CI anyway). |
+| `RAID_NO_PREFIX=1`| Drops per-task line prefixes so concurrent output stays parser-friendly. |
+
+## 2. A minimal CI step
+
+The full pattern is short:
+
+```bash
+# install raid (Linux runner)
+curl -fsSL https://raw.githubusercontent.com/8bitalex/raid/main/install.sh | bash
+
+# register the team profile
+raid profile add git@github.com:acme/raid-profiles.git
+
+# clone + bootstrap (non-interactive)
+raid install --headless
+
+# pick the env CI runs against
+raid env staging --headless
+
+# run the test command the team uses locally
+raid test --headless
+```
+
+Drop those into a GitHub Actions step, a GitLab job, or a Jenkinsfile and you've reproduced your local workflow in CI.
+
+## 3. GitHub Actions example
+
+```yaml
+name: ci
+on: [pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RAID_HEADLESS: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install raid
+        run: curl -fsSL https://raw.githubusercontent.com/8bitalex/raid/main/install.sh | bash
+      - name: Add profile
+        run: raid profile add ./ops/web-platform.raid.yaml
+      - name: Install
+        run: raid install
+      - name: Pick env
+        run: raid env staging
+      - name: Test
+        run: raid test
+```
+
+Setting `RAID_HEADLESS=1` at the job level means every subsequent step inherits it — no need to pass `--headless` on each call.
+
+## 4. Exit codes that mean something
+
+Raid maps failures to five categorical exit codes. CI can branch on the category instead of grep-ing log lines:
+
+| Exit code | Category   | Meaning                                                       |
+| --------- | ---------- | ------------------------------------------------------------- |
+| 1         | Generic    | Unclassified — fall-through bucket                            |
+| 2         | Config     | Invalid profile / repo schema / argument                      |
+| 3         | Task       | A user task failed (shell exit non-zero, prompt with no default, etc.) |
+| 4         | Network    | Clone failed, HTTP task failed                                |
+| 5         | Not Found  | Profile / env / command / repo missing                        |
+
+Use them to retry only transient failures (4 = network) or to short-circuit on misconfigured CI (2/5 = your YAML or env is wrong, retrying won't help):
+
+```bash
+set +e
+raid test
+case $? in
+  0) ;;
+  4) echo "Network blip — retrying once."; raid test ;;
+  *) exit 1 ;;
+esac
+```
+
+## 5. JSON output for tooling
+
+Commands that emit structured output respect `--json`:
+
+```bash
+raid profile list --json
+raid env list --json
+raid env --json            # which env is active right now
+raid context --json        # full workspace snapshot
+```
+
+Errors emit a structured envelope too:
+
+```json
+{
+  "error": {
+    "code": "PROFILE_NOT_FOUND",
+    "category": "not-found",
+    "message": "profile 'web-platform' not found",
+    "hint": "use 'raid profile list' to see available profiles"
+  }
+}
+```
+
+That's the contract a CI dashboard or a downstream tool can consume without screen-scraping.
+
+## 6. Prompts in non-interactive mode
+
+When `--headless` (or `RAID_HEADLESS=1`) is in effect, Raid resolves each interactive task as follows:
+
+- **`Confirm`** — auto-accepts. CI never blocks on a confirmation.
+- **`Prompt` with `default:`** — uses the default.
+- **`Prompt` without `default:`** — fails with code `HEADLESS_PROMPT_NO_DEFAULT` (exit 3) and a clear message naming the variable.
+
+The fix is to make every Prompt in a CI-runnable command provide a `default:`, even if the default is `''`. Or, for values that vary by run, set the variable in the shell first:
+
+```bash
+VERSION=1.4.0 raid release --headless
+```
+
+`Set` and `Prompt` look up the existing process environment when resolving the variable — explicit values in the shell take precedence over defaults.
+
+## 7. Caching the profile registration
+
+`raid profile add` writes to `~/.raid/`. In CI that directory is ephemeral, so the add cost runs each build. Two ways to skip that:
+
+- **Cache the directory.** `actions/cache` on `~/.raid` is a clean fix if your runners aren't ephemeral.
+- **Skip the registration step.** If you commit the profile inside the repo, you can pass the file path directly to `raid env` / `raid install` via `--profile` (`raid --profile ./ops/web-platform.raid.yaml install`).
+
+## Next steps
+
+- [How to Use Templates and Prompts in Raid Tasks](/blog/how-to-use-templates-and-prompts-in-raid-tasks) — defaults are the single most important rule for headless safety.
+- [How to Debug a Failing Raid Task](/blog/how-to-debug-a-failing-raid-task) — exit codes and verbose output when CI goes red.

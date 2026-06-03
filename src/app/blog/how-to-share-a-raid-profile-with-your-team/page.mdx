@@ -1,0 +1,194 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Share a Raid Profile with Your Team',
+  description:
+    'Distribute a Raid CLI profile across a team — Git repo, raw URL, or committed-in-monorepo — with versioning, rollout, and update strategies.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'raid profile', 'team development', 'multi-repo',
+    'developer onboarding', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-share-a-raid-profile-with-your-team' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Once a profile works on your machine, the next step is getting everyone else on the team using the same one. Raid supports three distribution patterns: a dedicated Git repo, a raw file URL, or committing the profile inside one of your existing repos.
+
+## 1. Pick a distribution shape
+
+| Shape                          | Best when                                            | Updates                          |
+| ------------------------------ | ---------------------------------------------------- | -------------------------------- |
+| Dedicated Git repo             | You have several profiles, or a team-wide convention | PR + re-run `raid profile add`   |
+| Raw HTTPS URL (release / wiki) | One profile, hosted somewhere stable                 | Bump the URL or overwrite        |
+| Committed inside an existing repo | Profile is specific to one product / monorepo     | Just pull the repo               |
+
+All three end at the same UX: `raid profile add <something>` and you're set up. The difference is who owns the source of truth and how updates flow.
+
+## 2. Distribution via a dedicated Git repo
+
+Create a small repo (`acme/raid-profiles` is a common name) and commit your profile(s) at the root:
+
+```
+acme/raid-profiles/
+├── web-platform.raid.yaml
+├── data-platform.raid.yaml
+└── README.md
+```
+
+New hires run:
+
+```bash
+raid profile add git@github.com:acme/raid-profiles.git
+```
+
+Raid shallow-clones the repo to a temp directory and imports every `*.raid.yaml`, `*.raid.yml`, and `profile.json` it finds at the root.
+
+**When this fits:** you maintain multiple profiles (one per product, environment, or team) and want a single canonical home for all of them.
+
+**Update flow:** PRs against `acme/raid-profiles`. To pick up a new version, developers re-run `raid profile add`.
+
+## 3. Distribution via a raw HTTPS URL
+
+Host the profile as a static file — release asset, internal wiki, gist raw view, or any HTTPS URL that ends in `.yaml`, `.yml`, or `.json`:
+
+```bash
+raid profile add https://example.com/web-platform.raid.yaml
+```
+
+Raid downloads the file to `~/<name>.raid.yaml`, validates it, and registers it.
+
+**When this fits:** you've already got a place to host versioned files (GitHub releases, an internal Confluence-served-by-web-server, an S3 bucket).
+
+**Update flow:** publish a new file or bump the URL (e.g. `v2.yaml` → `v3.yaml`) and tell people to re-add.
+
+## 4. Distribution inside an existing repo
+
+If the profile is specific to a single product, commit it inside your main repo:
+
+```
+acme/web-platform/
+├── ops/
+│   └── web-platform.raid.yaml
+├── apps/
+└── ...
+```
+
+Setup becomes:
+
+```bash
+git clone git@github.com:acme/web-platform.git
+cd web-platform
+raid profile add ./ops/web-platform.raid.yaml
+```
+
+**When this fits:** the profile is product-shaped — it ties to a specific monorepo or a small fleet of repos that move together.
+
+**Update flow:** developers pull the repo. Re-adding the local file overwrites the registered copy.
+
+## 5. Versioning strategies
+
+Whichever shape you pick, version the profile like code:
+
+- **Keep it in source control.** Every change is a reviewed PR. The history tells you when a command appeared and why.
+- **Add a `version:` comment at the top.** YAML doesn't need a version field, but a comment helps humans see what they're on:
+  ```yaml
+  # web-platform profile — v3 (2026-06-03)
+  ```
+- **Use Git tags or release URLs to pin.** For Git distribution, treat the `main` branch as latest. For URL distribution, host versioned files (`v1/web-platform.raid.yaml`) so people can pin.
+- **Bump the profile when commands change.** Adding a new `raid <command>` is additive and safe; renaming or removing one is breaking and worth a PR-level callout.
+
+## 6. Onboarding a new developer
+
+The full first-day path is short:
+
+```bash
+# 1. Install raid
+brew install 8bitalex/tap/raid
+
+# 2. Add the team profile
+raid profile add git@github.com:acme/raid-profiles.git
+
+# 3. Clone and bootstrap every repo in the profile
+raid install
+
+# 4. Pick the local environment
+raid env local
+```
+
+Four commands and the new hire is running the same `raid test`, `raid deploy`, `raid env staging` as everyone else.
+
+## 7. Pushing updates
+
+A profile distributed via Git or URL is **point-in-time** — Raid imports the contents at the moment you ran `raid profile add`. It does not stay linked to the source.
+
+To push an update across the team:
+
+1. Land the change in the profile repo.
+2. Notify the team (Slack, weekly notes, etc.).
+3. Developers re-run `raid profile add <same-source>` — Raid replaces their local registration.
+
+For breaking changes (a renamed command, a removed repo), pair the announcement with a migration note.
+
+## 8. Mixing per-repo overrides
+
+Profiles aren't the whole story — each repo's `raid.yaml` adds its own commands and environment overrides on top. Distributing the profile gives everyone the same *structure*; each repo's `raid.yaml` (committed inside the repo itself) covers the per-repo specifics. See [How to add a `raid.yaml` to an existing repo](/blog/how-to-add-a-raid-yaml-to-an-existing-repo) for that side of the split.
+
+## Next steps
+
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — write a profile from scratch before distributing it.
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — run the same profile in continuous integration.

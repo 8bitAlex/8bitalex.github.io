@@ -1,0 +1,199 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Use Templates and Prompts in Raid Tasks',
+  description:
+    'Build interactive Raid workflows: collect input with Prompt and Confirm, generate files from templates with the Template task, and stay safe in headless / CI mode.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'Prompt task', 'Confirm task', 'Template task',
+    'interactive CLI', 'YAML configuration', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-use-templates-and-prompts-in-raid-tasks' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Some workflows need a human in the loop — a destructive deploy needs confirmation, a release needs a version number, a generated config needs a token. Raid's `Prompt`, `Confirm`, and `Template` task types cover those needs without dropping back to ad-hoc shell scripts.
+
+This guide walks through all three, plus how they behave in CI / headless mode.
+
+## 1. Prompt — ask for a value
+
+A `Prompt` task reads a line from stdin and stores it in a variable that later tasks can reference:
+
+```yaml
+- type: Prompt
+  var: VERSION
+  message: Version to release (e.g. 1.4.0)?
+  default: 0.0.0-dev
+```
+
+After this runs, every subsequent task in the command can use `${VERSION}` or `$VERSION` in its fields. The variable lives for the duration of the command.
+
+### Defaults
+
+`default:` serves two purposes:
+
+1. **UX**: the user can hit Enter to accept it.
+2. **Headless mode safety**: when Raid runs in non-interactive mode (`--yes`, `--headless`, `RAID_HEADLESS=1`, or `--json`), Prompt tasks use the default instead of trying to read stdin.
+
+A Prompt task **without a `default:`** in headless mode fails with the structured error `HEADLESS_PROMPT_NO_DEFAULT` and exit code 3. Always provide a default for prompts you expect to run in CI.
+
+## 2. Confirm — pause for y/yes
+
+A `Confirm` task pauses the command until the user types `y` or `yes`:
+
+```yaml
+- type: Confirm
+  message: Deploy to production?
+```
+
+Any other input — `n`, `no`, empty, Ctrl-C — fails the command. Pair Confirm with destructive operations to catch fat-fingered runs:
+
+```yaml
+- type: Print
+  message: ⚠️  This will drop the production database.
+  color: red
+- type: Confirm
+  message: Type 'yes' to continue.
+- type: Shell
+  cmd: ./scripts/drop-prod-db.sh
+```
+
+In headless mode (`--yes`, `--headless`, `RAID_HEADLESS=1`), Confirm tasks auto-accept. That's intentional — CI should never block on a prompt — but it does mean *production safety rails should not rely on Confirm alone in CI*. Add an additional gate like an explicit env var or a separate command name.
+
+## 3. Template — render a file with variables
+
+A `Template` task reads a source file, expands `$VAR` / `${VAR}` references against the current variable scope (env vars, Set/Prompt outputs), and writes the result:
+
+```yaml
+- type: Template
+  src: ./templates/local.env.tmpl
+  dest: ./.env.local
+```
+
+If `templates/local.env.tmpl` contains:
+
+```
+API_URL=${API_URL}
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@localhost/dev
+VERSION=${VERSION}
+```
+
+…and `API_URL`, `DB_USER`, `DB_PASS`, `VERSION` are set in the environment or by earlier tasks, the output lands at `./.env.local` with those values substituted.
+
+Use Template for any file your app generates per-environment: config YAMLs, `.env.local`, Caddy / nginx snippets, k8s manifests for `kubectl apply`.
+
+## 4. Composing the three
+
+A common pattern: ask for a value, confirm a side effect, render a config, run it.
+
+```yaml
+commands:
+  - name: deploy
+    usage: Render the deploy manifest and apply it
+    tasks:
+      - type: Prompt
+        var: VERSION
+        message: Version to deploy (e.g. 1.4.0)?
+        default: 0.0.0-dev
+      - type: Prompt
+        var: ENVIRONMENT
+        message: Environment (staging | production)?
+        default: staging
+      - type: Print
+        message: Deploying ${VERSION} to ${ENVIRONMENT}.
+        color: cyan
+      - type: Confirm
+        message: Continue?
+      - type: Template
+        src: ./deploy/manifest.tmpl.yaml
+        dest: ./deploy/manifest.yaml
+      - type: Shell
+        cmd: kubectl apply -f ./deploy/manifest.yaml
+```
+
+Run it manually for an interactive walk-through. Run it in CI with `--yes` and explicit env vars (`RAID_VERSION=1.4.0 RAID_ENVIRONMENT=staging raid deploy --yes`) and the same tasks handle both cases.
+
+## 5. Variable sources, in priority order
+
+When Template / Shell / Set tasks expand `${VAR}`, Raid resolves the name against these sources (first match wins):
+
+1. **Variables set earlier in the same command** — via `Set` or `Prompt`.
+2. **The active environment's variables** — written to each repo's `.env`.
+3. **The process environment** — anything exported in the shell that launched `raid`.
+
+This lets you override an env-level value at runtime by setting it explicitly before the call:
+
+```bash
+API_URL=https://api.beta.acme.com raid deploy
+```
+
+## 6. CI behavior at a glance
+
+| Task     | Interactive             | Headless (`--yes` / `--headless` / `RAID_HEADLESS=1` / `--json`) |
+| -------- | ----------------------- | ---------------------------------------------------------------- |
+| Prompt   | Reads stdin             | Uses `default:`; fails `HEADLESS_PROMPT_NO_DEFAULT` if none      |
+| Confirm  | Requires `y`/`yes`       | Auto-accepts                                                     |
+| Template | Renders normally        | Renders normally (no interactivity)                              |
+
+When writing commands you expect to run in both contexts, always give Prompt tasks a `default:` — that's the single most important rule. See [How to wire Raid into CI](/blog/how-to-wire-raid-into-ci) for the full set of flags.
+
+## Next steps
+
+- [How to Define a Custom Command in Raid](/blog/how-to-define-a-custom-command-in-raid) — the broader tour of task types.
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — running interactive commands non-interactively.

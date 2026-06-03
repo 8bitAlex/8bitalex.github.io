@@ -1,0 +1,234 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Migrate from Make, Taskfile, or Just to Raid',
+  description:
+    'Move from per-project task runners (Make / Taskfile / Just / docker-compose) to Raid for multi-repo orchestration — with side-by-side conversions and a wrap-don\'t-replace strategy.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'Make', 'Makefile', 'Taskfile', 'Just', 'justfile',
+    'docker-compose', 'task runner', 'multi-repo', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-migrate-from-make-taskfile-just-to-raid' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+If your team is already comfortable with Make, Taskfile, Just, or docker-compose, the right migration to Raid isn't a rewrite — it's a wrapper. Keep your existing per-project recipes, and let Raid handle the layer above them: orchestrating across repos, switching environments, and giving the team one consistent CLI.
+
+This guide covers when to wrap vs. replace, how to convert common recipes, and what to do with docker-compose.
+
+## 1. The split: per-project vs. cross-project
+
+Make, Taskfile, and Just are great at one job: defining and running tasks **inside a single project**. They've all been refined for years, your team probably already knows them, and they belong inside each repo's `Makefile` / `Taskfile.yml` / `justfile`.
+
+Raid solves a layer up: **orchestrating the developer environment across multiple repos** — cloning them in one command, switching everyone's environment at once, exposing a single CLI that works no matter which repo you're standing in.
+
+The cleanest migration is:
+
+- **Keep** your existing `Makefile` / `Taskfile.yml` / `justfile` in each repo.
+- **Add** a `raid.yaml` that maps team-facing commands to those recipes.
+- **Add** a profile at the team level that ties the repos together and defines environments.
+
+You get Raid's multi-repo features without rewriting tasks you already trust.
+
+## 2. From Makefile to raid.yaml
+
+A typical Make recipe:
+
+```make
+.PHONY: build test deploy
+build:
+	npm run build
+test:
+	npm test
+deploy:
+	./scripts/deploy.sh
+```
+
+The `raid.yaml` wrapper:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-repo.schema.json
+name: frontend
+commands:
+  - name: build
+    tasks: [{ type: Shell, cmd: make build }]
+  - name: test
+    tasks: [{ type: Shell, cmd: make test }]
+  - name: deploy
+    tasks: [{ type: Shell, cmd: make deploy }]
+```
+
+Net change: nothing on the Make side. The team now runs `raid build` from anywhere on disk and it does the right thing — Raid resolves the command, switches to the repo's directory, and shells out to `make`.
+
+## 3. From Taskfile to raid.yaml
+
+Taskfile recipes are a little richer (variables, deps, includes). The conversion is identical:
+
+```yaml
+# Taskfile.yml
+version: '3'
+tasks:
+  build: { cmds: [npm run build] }
+  test:  { cmds: [npm test] }
+```
+
+```yaml
+# raid.yaml
+name: api
+commands:
+  - name: build
+    tasks: [{ type: Shell, cmd: task build }]
+  - name: test
+    tasks: [{ type: Shell, cmd: task test }]
+```
+
+If you have several Taskfile recipes you'd like to expose as separate Raid commands, list them one by one. If you'd rather expose the Taskfile namespace as a single passthrough, you can — `tasks: [{ type: Shell, cmd: 'task $@' }]`-style wrappers work too.
+
+## 4. From justfile to raid.yaml
+
+Just's `justfile` recipes:
+
+```just
+build:
+    npm run build
+test:
+    npm test
+```
+
+Wrapper:
+
+```yaml
+# raid.yaml
+name: worker
+commands:
+  - name: build
+    tasks: [{ type: Shell, cmd: just build }]
+  - name: test
+    tasks: [{ type: Shell, cmd: just test }]
+```
+
+## 5. From docker-compose to a profile + per-repo raid.yaml
+
+docker-compose is the closest tool to Raid in scope — it does manage multiple services as a unit — but it does so at the *container level*, not the repo level. The two compose cleanly: docker-compose runs your service containers, Raid orchestrates the repos that contain them.
+
+A typical migration:
+
+```yaml
+# acme.raid.yaml — profile
+name: acme
+repositories:
+  - { name: frontend, path: ~/Developer/frontend, url: https://github.com/acme/frontend.git }
+  - { name: api,      path: ~/Developer/api,      url: https://github.com/acme/api.git }
+
+environments:
+  - name: local
+    variables:
+      - { name: API_URL, value: http://localhost:8080 }
+    tasks:
+      - type: Shell
+        cmd: docker compose -f ./infra/docker-compose.yml up -d
+```
+
+Now `raid env local` starts the compose stack and writes `.env` files to every repo. Developers don't need to remember to `docker compose up` separately.
+
+## 6. Cross-repo commands: the part Make can't do
+
+The above is pure wrapping — Raid exposes existing recipes through a consistent CLI. The piece that's *new* with Raid is commands that act on every repo at once. Define them at the profile level:
+
+```yaml
+commands:
+  - name: format
+    usage: Format every repo in the profile
+    tasks:
+      - type: Shell
+        cmd: make format
+        path: ~/Developer/frontend
+        concurrent: true
+      - type: Shell
+        cmd: make format
+        path: ~/Developer/api
+        concurrent: true
+```
+
+`raid format` runs both Makefiles in parallel. There's no equivalent in plain Make/Taskfile/Just — they're scoped to the single project they live in.
+
+## 7. Keep what works
+
+You don't have to migrate every recipe. A reasonable rule:
+
+- **Keep in Make/Taskfile/Just:** language- or framework-specific build steps (`tsc`, `go build`, `cargo test`). These tools have great recipe support and live close to the code.
+- **Move (wrap) into Raid:** anything the *team* should be able to run consistently — `test`, `lint`, `dev`, `deploy`. These benefit from the `raid <name>` UX and the ability to run from anywhere on disk.
+- **Define only in Raid:** cross-repo commands (`raid format`, `raid update-deps`), environment switching (`raid env staging`), and bootstrap (`raid install`).
+
+That split gives you the durability of existing per-project tooling and Raid's multi-repo features without paying for either twice.
+
+## 8. Rollout in three commits
+
+A safe migration sequence for a team:
+
+1. **Add `raid.yaml` to each repo** with wrapper commands pointing at existing recipes. Nothing changes for developers who haven't installed Raid yet.
+2. **Add the team profile** to a `raid-profiles` repo (or commit it inside the platform repo). Document `raid profile add ...` in the README.
+3. **Ask the team to install raid** — see [How to install Raid](/blog/how-to-install-raid). Old `make`/`task`/`just` workflows still work; new `raid` workflows now also work.
+
+The two coexist forever. No flag day, no rewrite, no mandate.
+
+## Next steps
+
+- [How to Add a `raid.yaml` to an Existing Repo](/blog/how-to-add-a-raid-yaml-to-an-existing-repo) — the file you'll add first.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — the team-level wrapper.
+- [How to Share a Raid Profile with Your Team](/blog/how-to-share-a-raid-profile-with-your-team) — getting everyone on the same one.

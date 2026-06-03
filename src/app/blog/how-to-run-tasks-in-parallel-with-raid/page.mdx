@@ -1,0 +1,197 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Run Tasks in Parallel with Raid',
+  description:
+    'Use `concurrent: true` and Group `parallel: true` to fan out Raid tasks across CPU cores — with the safety rules, output prefixing, and when not to parallelize.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'parallel tasks', 'concurrent execution',
+    'task runner', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-run-tasks-in-parallel-with-raid' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+By default, Raid runs the tasks in a command sequentially — one at a time, halting on the first failure. That's the safe choice for most workflows. But for independent work — building three packages, downloading a few assets, pinging a few endpoints — running tasks in parallel cuts wall-clock time substantially.
+
+Raid offers two parallelism knobs: `concurrent: true` on individual tasks and `parallel: true` on Group tasks. This guide covers both, plus the output and error semantics that come with them.
+
+## 1. `concurrent: true` — task-level fan-out
+
+The simplest form: mark a task as `concurrent` and it runs **alongside** the next task instead of blocking it.
+
+```yaml
+commands:
+  - name: build-all
+    tasks:
+      - type: Shell
+        cmd: npm run build --workspace=web
+        concurrent: true
+      - type: Shell
+        cmd: npm run build --workspace=api
+        concurrent: true
+      - type: Shell
+        cmd: npm run build --workspace=worker
+```
+
+The first two tasks launch in parallel. The third starts as soon as the runtime picks it up. The command waits for *all* concurrent tasks to complete before reporting the result.
+
+**Rule of thumb:** mark every concurrent task — including the last one in a fan-out group — with `concurrent: true`. Mixing concurrent and sequential tasks is allowed but the ordering becomes harder to reason about; consistent flags make the intent obvious.
+
+## 2. Group tasks — parallelism with retry semantics
+
+For more structured work, the `Group` task type runs a named block of tasks together and supports `parallel: true`, retry attempts, and inter-attempt delay:
+
+```yaml
+- type: Group
+  ref: smoke-tests
+  parallel: true
+  attempts: 3
+  delay: 5s
+```
+
+The referenced `smoke-tests` block runs once. If it fails, Raid retries up to `attempts` times, waiting `delay` between tries. With `parallel: true`, the tasks inside the group run concurrently.
+
+Use Group when you want parallelism + retry on a logical unit (a flaky smoke-test suite, a fan-out HTTP probe). Use task-level `concurrent: true` for ad-hoc fan-out without retry.
+
+## 3. Output prefixing
+
+Concurrent tasks interleave their output. To keep things readable, Raid prefixes each line with the task's name (or type):
+
+```
+[build:web]   built dist/web/index.js
+[build:api]   compiled api in 1.4s
+[build:web]   built dist/web/styles.css
+```
+
+Disable it with the `RAID_NO_PREFIX=1` environment variable if you're piping output to a tool that expects raw stdout.
+
+## 4. Failure semantics
+
+When any concurrent task fails, Raid:
+
+1. Records the failure.
+2. **Lets other concurrent tasks finish.** It does not interrupt in-flight work.
+3. Reports the failure and exits non-zero once all concurrent tasks have completed.
+
+This mirrors how most parallel test runners behave — you get a full picture instead of a half-finished run. If you'd rather suppress an expected failure, mark that specific task with `options.continueOnFailure: true`.
+
+## 5. When *not* to parallelize
+
+Parallelism trades determinism for speed. A few situations where keeping tasks sequential is worth it:
+
+- **Shared mutable state** — two tasks writing to the same file, port, or database.
+- **Order-dependent setup** — install before build, build before test.
+- **User-facing prompts** — a `Prompt` or `Confirm` task should never share the terminal with a sibling task.
+- **Resource-bound work** — saturating CPU or disk usually doesn't make the total faster, just messier.
+
+When in doubt, leave tasks sequential. `concurrent: true` is an optimization, not a default.
+
+## 6. Pattern: parallel build + sequential test + parallel publish
+
+A realistic command structure:
+
+```yaml
+commands:
+  - name: ship
+    usage: Build, test, and publish all packages
+    tasks:
+      # Build everything in parallel
+      - type: Shell
+        cmd: npm run build --workspace=web
+        concurrent: true
+      - type: Shell
+        cmd: npm run build --workspace=api
+        concurrent: true
+      - type: Shell
+        cmd: npm run build --workspace=worker
+        concurrent: true
+
+      # Test sequentially (shared test DB)
+      - type: Shell
+        cmd: npm run test
+
+      # Publish in parallel — independent registries
+      - type: Shell
+        cmd: npm publish --workspace=web
+        concurrent: true
+      - type: Shell
+        cmd: npm publish --workspace=api
+        concurrent: true
+      - type: Shell
+        cmd: npm publish --workspace=worker
+        concurrent: true
+```
+
+Builds and publishes fan out; tests stay serial. The wall-clock time drops to roughly `max(build) + test + max(publish)` instead of the sum of every step.
+
+## 7. `raid install --threads`
+
+A separate but related knob: `raid install` clones every repo in the profile in parallel. Cap the parallelism with `--threads N` (or `-t N`) if you're on a constrained network or want to limit concurrent git operations:
+
+```bash
+raid install --threads 4
+```
+
+This applies only to the clone phase, not to install tasks (which still run in their defined order).
+
+## Next steps
+
+- [How to Define a Custom Command in Raid](/blog/how-to-define-a-custom-command-in-raid) — full tour of task types.
+- [How to Add a Health Check to a Raid Workflow](/blog/how-to-add-a-health-check-to-a-raid-workflow) — `Wait` tasks pair well with parallel startups.
+- [Raid technical deep dive](/blog/raid-technical-deep-dive) — the engine that schedules these tasks.
