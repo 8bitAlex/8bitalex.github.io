@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { FadeIn } from '@/components/FadeIn'
 import { Container } from '@/components/layout/Container'
 import { MDXComponents } from '@/components/MDXComponents'
@@ -27,6 +29,19 @@ export default async function BlogArticleWrapper({
               {formatDate(post.date)}
             </time>
             <p className="mt-6 text-sm font-semibold text-neutral-950">by {post.author.name}</p>
+            {post.tags && post.tags.length > 0 && (
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    href={`/blog/tags/${tag.toLowerCase()}`}
+                    className="inline-flex items-center rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium text-neutral-700 transition hover:border-neutral-950 hover:bg-neutral-950 hover:text-white"
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            )}
           </header>
         </FadeIn>
 
