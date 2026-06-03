@@ -1,0 +1,201 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Write a Runbook Your Team Actually Follows',
+  description:
+    "Most runbooks rot the day after they're written. The fix isn't a better wiki — it's making the runbook executable and version-controlled so the team can't ignore it.",
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'runbook', 'runbooks', 'team runbook', 'operational runbook',
+    'engineering documentation', 'incident response', 'developer experience'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-write-a-runbook-your-team-actually-follows' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+A runbook is supposed to be the document you reach for at 3 AM when something's broken. In practice, most runbooks are the document you find at 3 AM, discover is six months out of date, and abandon to go ping the on-call engineer who actually knows what to do.
+
+This post is about how to write runbooks that don't rot — and the realization that what most teams call "runbooks" should actually be **executable artifacts**, not documents.
+
+## 1. The runbook trap
+
+The standard runbook lives in a wiki. It has sections like "Deploying the API," "Rotating a credential," "Recovering from a stuck migration." Each section is prose with embedded commands.
+
+The trap is that **prose can be wrong silently**. The command that was `kubectl rollout restart deployment api` last quarter is now `kubectl rollout restart deployment api-v2`, and the only person who knows is the engineer who renamed it. The wiki still says the old thing. Anyone who runs it gets a confusing "no such resource" error and falls back to asking the on-call.
+
+The problem isn't that wiki editors are lazy. The problem is that **the runbook isn't load-bearing**. Nobody runs the wiki page; people run the *commands* it documents. When the commands change, nothing forces the wiki to keep up.
+
+## 2. What "executable runbook" means
+
+Replace the prose with code. Not a 200-line bash script — a small declarative file that lists the steps:
+
+```yaml
+commands:
+  - name: deploy-api
+    usage: Deploy the api service to staging
+    tasks:
+      - { type: Confirm, message: "Deploying api to staging — continue?" }
+      - { type: Shell, cmd: kubectl --context staging rollout restart deployment api }
+      - { type: Wait,  url: https://api.staging.acme.com/health, timeout: 120s }
+      - { type: Print, message: "api is healthy in staging.", color: green }
+```
+
+That's the runbook. Anyone runs `team deploy-api`. The steps are explicit, reviewed in PRs, and impossible to silently drift — when somebody renames the deployment, this file fails immediately, and the fix is in the same PR as the rename.
+
+The wiki, if you keep one, becomes a thin layer of context — *why* the steps exist, *who* owns them — not a list of commands.
+
+## 3. The five rules of a runbook that doesn't rot
+
+Concretely, what makes one version durable and another version rot:
+
+**Rule 1: The runbook is the executable, not the description.** Prose around the executable is fine — sometimes essential. But the commands themselves should be the source of truth, not transcribed into prose.
+
+**Rule 2: It lives in the repo, not the wiki.** The PR that changes the deploy process should change the runbook in the same commit. If they live in different systems, they drift.
+
+**Rule 3: It's reviewed.** A runbook change is a code change. It gets a PR. Two eyes. Tests if appropriate.
+
+**Rule 4: It's idempotent where possible.** Running it twice in a row should do roughly the same thing as running it once. If it can't be (a one-way migration), the runbook should *fail safely* on re-run, not corrupt state.
+
+**Rule 5: It's the same artifact in incident response, scheduled work, and CI.** "Deploying" is one operation, regardless of who's invoking it. If you have one deploy procedure for incidents and another for normal deploys, the incident one will drift.
+
+## 4. What this looks like in practice
+
+A few concrete patterns:
+
+### Deploy runbook
+
+```yaml
+commands:
+  - name: deploy
+    usage: Deploy the active service to the target environment
+    tasks:
+      - { type: Prompt, var: TARGET, message: "Environment (staging | production)?", default: staging }
+      - { type: Confirm, message: "Deploy to ${TARGET}?" }
+      - { type: Shell,  cmd: "./scripts/deploy.sh ${TARGET}" }
+      - { type: Wait,   url: "https://api.${TARGET}.acme.com/health", timeout: 120s }
+      - { type: Print,  message: "Deployed to ${TARGET}.", color: green }
+```
+
+### Credential rotation runbook
+
+```yaml
+commands:
+  - name: rotate-db-password
+    usage: Rotate the DB password and roll it through the apps
+    tasks:
+      - { type: Print, message: "Rotating database password — apps will restart.", color: yellow }
+      - { type: Confirm, message: "Continue?" }
+      - { type: Shell, cmd: "./scripts/rotate-secret.sh DB_PASSWORD" }
+      - { type: Shell, cmd: "kubectl rollout restart deployment api" }
+      - { type: Wait,  url: "https://api.acme.com/health", timeout: 120s }
+      - { type: Print, message: "Rotation complete.", color: green }
+```
+
+### Incident-response runbook
+
+```yaml
+commands:
+  - name: incident-restart-worker
+    usage: Restart the worker if jobs are backlogged
+    tasks:
+      - { type: Shell, cmd: kubectl rollout restart deployment worker }
+      - { type: Wait,  url: http://worker.internal/health, timeout: 60s }
+      - { type: Shell, cmd: kubectl logs -l app=worker --tail=50 }
+```
+
+That's three runbooks, three operations, each version-controlled. A new on-call engineer's runbook training is `team --help` — they get the full list of operations and can read the YAML to see what each does.
+
+## 5. What goes in the wiki vs. what goes in the runbook
+
+You probably still want a wiki. The split that works:
+
+- **Wiki:** *why* a thing matters. Architectural context. Decision rationale. Incident postmortems. Onboarding orientation. Anything that explains the *system* rather than describes how to *operate* it.
+- **Runbook (executable):** *how* to do each operation. Commands. Sequencing. Pre- and post-flight checks.
+
+A wiki page about "the auth subsystem" is great. A wiki page titled "Deploying auth" is a smell — that should be `team deploy-auth`.
+
+## 6. The handoff: from script to runbook
+
+Most teams that try to retire their wiki runbooks fail because they try to rewrite everything. Don't. Migrate one operation at a time:
+
+1. Pick a single procedure — usually deploy, because everyone runs it and the wiki version is most likely wrong.
+2. Move it into the runner. The first version can be a single `Shell` task that calls the existing script. That's fine.
+3. Use it for a week. Edit it when reality diverges from what's there.
+4. Once it's stable, delete the wiki version (or leave a stub pointing at the runner command).
+5. Pick the next procedure.
+
+After a quarter you've migrated the top 10 operations the team actually runs. The wiki has gotten lighter, not heavier. The runbooks are the source of truth because they're the *only thing that runs*.
+
+## 7. The team-level view
+
+The thing that takes this from "nice scripts" to "actual runbook infrastructure" is making the operations *discoverable* without a wiki. `team --help` should list every operation the team supports. New on-calls should be able to grep through the runbook directory to find what they need. No memorized URLs to the wiki, no asking in Slack.
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this — declarative YAML commands at the team and per-repo level, all surfaced through one CLI. Whatever tool you pick, the bar is "every team operation is one command, defined in source control, discoverable through `--help`."
+
+## 8. The on-call test
+
+Easy way to measure if your runbooks work: hand them to a new on-call engineer who's never run any of them. Can they do the operation without paging someone senior?
+
+If yes — your runbooks are load-bearing.
+If no — your runbooks are aspirational documents.
+
+The point of all of the above is moving from the second to the first.
+
+## Next steps
+
+- [How to Define a Custom Command in Raid](/blog/how-to-define-a-custom-command-in-raid) — the mechanism that makes runbooks executable.
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — running the same runbooks non-interactively.
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader picture.

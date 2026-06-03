@@ -1,0 +1,166 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Make "It Works on My Machine" Actually Mean Something',
+  description:
+    "The phrase is a meme because it's almost never true. Here's how to make local development environments consistent enough that 'works on my machine' becomes a real signal.",
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'works on my machine', 'environment parity', 'developer environment',
+    'reproducible builds', 'dev environment consistency',
+    'twelve factor app', 'developer experience'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-make-it-works-on-my-machine-mean-something' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+"It works on my machine" became a meme because it's almost always *false* in a useful sense. Sure, the test passes on the developer's laptop — but their laptop has a different Node version, the wrong `.env`, a cached docker image, and a half-finished migration the rest of the team doesn't have. Of course it works on their machine. That's not a signal.
+
+Making the phrase mean something requires that "my machine" and "anyone else's machine" be *structurally identical* — same dependencies, same versions, same environment, same data shape. When that's true, "it works on my machine" becomes solid evidence that the change is correct. When it's not, "it works on my machine" is at best a starting point.
+
+This post is about how to close the gap.
+
+## 1. What's actually different between machines
+
+The honest list of things that drift between developer laptops:
+
+- **Language toolchain versions.** Node 18 vs Node 22; Go 1.21 vs 1.23; the wrong Python venv.
+- **System tools.** `make` vs `gmake`. `gnu-sed` vs BSD `sed`. `jq` 1.6 vs 1.7. (macOS users especially feel this.)
+- **Docker image cache.** Two developers' `node:20-alpine` may be built three weeks apart, with different OS-level packages.
+- **Local environment variables.** Different `API_URL`, different `LOG_LEVEL`, different feature flags.
+- **Local data.** A database seeded last quarter vs. one seeded yesterday.
+- **Untracked config files.** Someone's `.envrc` includes a debug flag. Someone's `direnv` is loading something the other isn't.
+- **Local edits to dependencies.** A `node_modules` patch that survived an `npm ci` because the cache was warm.
+
+Each of these is benign in isolation. Together they make "it works on my machine" a probabilistic statement, not an evidentiary one.
+
+## 2. The two strategies (and their limits)
+
+There are two broad approaches to closing the gap.
+
+**Strategy A: Containerize everything.** Run all development inside Docker. Dev containers in VS Code. devcontainers.json. The promise: the container has fixed versions, fixed system tools, fixed everything.
+
+The cost is real: container-based dev has performance penalties (especially on macOS where file system syncing is famously imperfect), IDE integration trade-offs, and a learning curve that's not zero. Done well, it pretty much eliminates drift. Done halfway, it adds a new source of drift (different host configs, different container caches, different mount strategies).
+
+**Strategy B: Standardize the host setup.** Pin language versions with `asdf` / `mise` / `nvm`. Pin system tools with Homebrew Bundle / nix. Pin environment variables with a team-level definition. Pin data with reproducible seeds.
+
+Lighter weight. Slower to actually achieve full parity (because the host is still hers, not a container). But the day-to-day developer experience is closer to "just code."
+
+Most teams end up with **Strategy B with selective containerization** — host-pinned toolchains for fast dev iteration, Docker for backing services (Postgres, Redis, the message bus), and CI uses the same Docker images as local for its services.
+
+## 3. The pieces that make Strategy B work
+
+If you're going the host-pinned route, the components you need:
+
+1. **Pinned language versions.** `.tool-versions` (asdf/mise) committed in the repo. Everyone gets the same Node/Go/Python/Ruby.
+2. **Pinned system tools.** A `Brewfile` or equivalent that's part of the bootstrap. Not optional — if `jq` is required, it's installed by the bootstrap, not by tribal knowledge.
+3. **Pinned environment variables.** A team-level definition (not five `.env.example` files) that the bootstrap writes to each repo. See [How to keep dev / staging / prod environments in sync](/blog/how-to-keep-dev-staging-prod-environments-in-sync).
+4. **Reproducible local data.** A `seed.sh` that drops and recreates the local DB from a known state. Pair with a `team reset` command that runs it.
+5. **Containerized backing services.** Postgres, Redis, etc. in Docker. The same images locally and in CI.
+6. **One command that wires it all together.** A bootstrap step that pins, installs, seeds, and writes config in one pass.
+
+Each piece is well-trodden in isolation. The team-level coordination is what's missing in most setups.
+
+## 4. The forgotten lever: the bootstrap *itself*
+
+What unlocks all of this is that **the bootstrap is a versioned artifact**. Not a script on one engineer's laptop. Not a wiki page. A YAML file (or equivalent) checked in to source control, reviewed in PRs, and run by every developer the same way.
+
+When the team rolls out a new tool (Postgres 17 → 18, Node 22 → 24), it's one PR to the bootstrap. Everyone's next pull picks it up. There's no drift period where some developers have the new version and some don't — the bootstrap is the source of truth.
+
+This is what makes "it works on my machine" useful: every machine ran the same bootstrap. The differences are now real, not artifacts of drift.
+
+## 5. What this looks like in practice
+
+A team-level YAML profile defines the install steps for the whole stack:
+
+```yaml
+install:
+  tasks:
+    - { type: Shell, cmd: brew bundle --file=./Brewfile }
+    - { type: Shell, cmd: asdf install }
+    - { type: Shell, cmd: docker compose -f ./infra/local.yml up -d }
+    - { type: Wait,  url: localhost:5432, timeout: 60s }
+    - { type: Shell, cmd: ./scripts/seed.sh }
+```
+
+Each repo's `raid.yaml` adds its own per-repo steps (`npm ci`, `go mod download`, codegen). One command runs the whole thing:
+
+```bash
+raid install
+```
+
+Every developer's machine, every CI run — same bootstrap. When something diverges, the bootstrap is where you go to fix it, and the fix propagates to everyone.
+
+I built [Raid](https://github.com/8bitAlex/raid) for this. You don't have to use Raid — the property that matters is that the bootstrap is versioned, declarative, and the same artifact everywhere.
+
+## 6. What changes when this works
+
+A few quiet but important changes happen when the bootstrap is solid:
+
+- **`team reset` becomes routine.** When everything is reproducible, "blow away my env and restart" is a 5-minute operation, not a half-day. Developers run it casually.
+- **Bug reports are higher-quality.** When the developer's environment is known, "I see X" tells you more than when their setup is a snowflake.
+- **CI failures are diagnosable locally.** If CI is reproducible from the same bootstrap you ran, you can usually reproduce a CI failure on your laptop in a couple of commands.
+- **"Works on my machine" actually starts to mean something.** It's a claim that the change is correct *in a known environment*, which is the strongest local signal you can produce.
+
+## 7. The diminishing returns warning
+
+You can spend a quarter chasing exact-bit parity between local and CI. Don't. The point isn't bitwise identical environments — it's that the *axes of difference* are explicit and small. Aim for "if it works on my machine, it'll work in CI 95% of the time." That's a vast improvement over the baseline. The last 5% is a separate, expensive project.
+
+## Next steps
+
+- [How to Keep Dev, Staging, and Prod Environments in Sync](/blog/how-to-keep-dev-staging-prod-environments-in-sync) — the same problem at production scale.
+- [How to Stop Maintaining a 50-Line Bash Setup Script](/blog/how-to-stop-maintaining-a-50-line-bash-setup-script) — the specific artifact most teams need to retire.
+- [How to Clone All Your Team's Repos with `raid install`](/blog/how-to-clone-all-your-team-repos-with-raid-install) — the bootstrap primitive.

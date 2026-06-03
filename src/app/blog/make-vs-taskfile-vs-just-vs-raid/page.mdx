@@ -1,0 +1,193 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'Make vs Taskfile vs Just vs Raid: Picking a Task Runner in 2026',
+  description:
+    'Make, Taskfile, Just, and Raid each solve different problems. Here\'s an honest comparison — what each is best at, where each falls short, and how to pick.',
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Make vs Taskfile', 'Taskfile vs Just', 'Just vs Make',
+    'task runner comparison', 'developer tooling 2026',
+    'Makefile alternative', 'task automation', 'developer experience'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/make-vs-taskfile-vs-just-vs-raid' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Picking a task runner in 2026 is less straightforward than it used to be. Make is universally available and universally hated. Taskfile is great YAML and a smaller community. Just is fast and ergonomic but Linux-flavored. Raid is the newest, and it solves a different problem from the other three.
+
+Disclosure: I wrote Raid. I'll try to be fair to the others — they all earned their place — but my bias is real. The comparison below tries to be honest about where each shines and where each falls short, including Raid.
+
+## 1. The TL;DR
+
+| Tool      | Best at                                        | Falls short on                                  |
+| --------- | ---------------------------------------------- | ----------------------------------------------- |
+| Make      | Single-project builds, universal availability  | Readable YAML, multi-repo, cross-platform polish |
+| Taskfile  | YAML readability, single-project orchestration | Multi-repo, environment-switching                |
+| Just      | Ergonomics, fast, command-as-recipe model      | YAML purity, multi-repo, broad Windows support  |
+| Raid      | Multi-repo orchestration, environments         | Standalone single-project use cases             |
+
+If you have **one repo**, Make / Taskfile / Just are all reasonable; pick on syntactic taste. If you have **multiple repos** and a team, Raid is the answer.
+
+## 2. Make
+
+The default. Available everywhere. The syntax dates from the 1970s and has the wisdom and the warts of that age — tabs vs spaces, recursive Makefile pitfalls, the quirky way variables expand.
+
+**Where it shines.** Make is *everywhere*. Every CI runner has it. Every developer recognizes `make build`. For a single-project repo where you want zero install friction, Make is hard to beat.
+
+**Where it falls short.** Multi-project orchestration is painful (recursive make is famously fragile). The syntax is hostile to YAML-trained eyes. Cross-platform behavior between GNU Make on Linux and BSD Make on macOS is a tax. Self-documenting `make help` requires conventions, not native support.
+
+**Pick Make when:** you have one repo, you don't want to introduce a new tool, and your team is comfortable with the syntax.
+
+## 3. Taskfile
+
+A YAML task runner inspired by `make` but reimagined for the modern era. Single Go binary, cross-platform, readable YAML, includes, dependencies, dynamic variables.
+
+**Where it shines.** Taskfile is the cleanest YAML task runner in active development. It has real features (deps, includes, sources/generates for incremental work, dynamic vars). It's pleasant to write and pleasant to read. Cross-platform behavior is consistent.
+
+**Where it falls short.** Like Make, it's project-scoped. If you have five repos, you have five Taskfiles, and keeping them aligned is manual. Environment switching across repos isn't a built-in concept. Per-team distribution (an `acme/raid-profiles`-style repo) doesn't have a Taskfile equivalent.
+
+**Pick Taskfile when:** you have one repo and want better Make. Or you have a few repos that don't need cross-repo coordination.
+
+## 4. Just
+
+A command runner inspired by Make, written in Rust, with a focus on ergonomics. The `justfile` reads cleanly, the CLI is fast, and the recipes-as-shell-functions model is elegant.
+
+**Where it shines.** Just is delightful to use for a single repo. The `just --list` output is the cleanest of any tool here. Recipe parameters, dependencies, and `set` directives are well-designed. It's fast.
+
+**Where it falls short.** The DSL isn't YAML, which some teams prefer for schema validation and editor completion. Windows support exists but isn't as polished as Linux/macOS. Same multi-repo limit as Make and Taskfile — Just is project-scoped.
+
+**Pick Just when:** you have one repo, you want the nicest single-project task runner, and your team is comfortable adding a (small) new tool to their PATH.
+
+## 5. Raid
+
+A multi-repo orchestrator. Where Make/Taskfile/Just live inside a single repo, Raid lives at the *team* level — a YAML profile declares which repos exist, what environments are supported, and what commands the team runs. The CLI clones repos, switches environments, and runs commands across the whole workspace.
+
+**Where it shines.** Anything that crosses repo boundaries. Day-one onboarding (`raid install` clones every repo). Environment switching (`raid env staging` writes `.env` to every repo). Cross-repo commands (`raid test` runs the team's test command across services). Distribution to a team (point everyone at a Git URL containing the profile).
+
+**Where it falls short.** Raid isn't trying to be your single-project build tool. It does have an 11-task-type runner that *could* handle single-project orchestration, but in practice you'll keep using Make/Taskfile/Just for the per-project work and have Raid wrap them at the team level.
+
+**Pick Raid when:** you have multiple repos and a team. Or you're tired of maintaining a 50-line bash bootstrap script.
+
+## 6. The shape that matters
+
+A useful way to think about the choice:
+
+- **Per-project task runners** (Make, Taskfile, Just) solve the question "how does our team run commands in this one project?"
+- **Multi-repo orchestrators** (Raid) solve the question "how does our team run commands across this collection of projects?"
+
+They're not really competitors. They compose. The teams I've seen succeed at multi-repo developer experience tend to have *both* — `make` / `task` / `just` in each repo for language-specific work, and Raid at the team level wrapping them with a consistent CLI.
+
+Concrete shape:
+
+```yaml
+# raid.yaml in each repo wraps the per-project runner
+commands:
+  - { name: build, tasks: [{ type: Shell, cmd: make build }] }
+  - { name: test,  tasks: [{ type: Shell, cmd: make test }] }
+```
+
+```yaml
+# team profile defines cross-repo operations
+commands:
+  - name: test-all
+    tasks:
+      - { type: Shell, cmd: make test, path: ~/Developer/api,      concurrent: true }
+      - { type: Shell, cmd: make test, path: ~/Developer/frontend, concurrent: true }
+```
+
+The team's existing Make / Taskfile / Just investment isn't wasted. Raid wraps it.
+
+## 7. The honest "don't use Raid" cases
+
+To make this an actually-fair comparison, here are cases where Raid is the wrong pick:
+
+- **Single repo, no team coordination.** Use Make/Taskfile/Just. Raid is overkill.
+- **You don't run more than one service locally.** The multi-repo features are the value. If you have one service, you don't need them.
+- **You've already invested heavily in Nx / Turborepo for a monorepo.** Those tools occupy a similar coordination layer for monorepos. Don't add a second one.
+- **You want hermetic incremental builds.** Raid's task runner doesn't track inputs/outputs for caching. Bazel/Nx do that better for builds-as-graphs.
+
+For everything else — and especially for the polyrepo-with-a-team case — Raid is the simplest tool that solves the multi-repo coordination problem.
+
+## 8. A migration that doesn't blow up the team
+
+If you're considering Raid and you've already got Make/Taskfile/Just, the migration isn't a rewrite:
+
+1. **Keep your existing per-project tooling.** It works. Don't touch it.
+2. **Add `raid.yaml` to each repo** with commands that shell out to your existing recipes.
+3. **Add a team-level profile** with repos, environments, and any cross-repo commands.
+4. **Roll out to the team gradually.** Developers can install Raid when they're ready. Old workflows still work.
+
+No flag day, no rewrite mandate. See [How to migrate from Make, Taskfile, or Just to Raid](/blog/how-to-migrate-from-make-taskfile-just-to-raid) for the longer version.
+
+## 9. Quick decision matrix
+
+If your dominant pain is...
+
+- **The Make syntax is hostile** → Taskfile or Just.
+- **My team's CLI is inconsistent across services** → Raid wraps existing recipes.
+- **Onboarding takes 2+ days** → Raid (clones, bootstraps, env-switches in one command).
+- **Switching from local to staging is N manual steps** → Raid (`raid env staging`).
+- **CI does something different from what developers run** → Pick anything declarative; the win is "same artifact local and CI." Make/Taskfile/Just give you that within a project; Raid gives you that across projects.
+- **My single-repo Makefile works fine** → Don't change it.
+
+The honest answer for most teams is "you already have Make/Taskfile/Just doing the per-project layer; add a multi-repo orchestrator above it." Raid is one option for that layer.
+
+## Next steps
+
+- [How to Migrate from Make, Taskfile, or Just to Raid](/blog/how-to-migrate-from-make-taskfile-just-to-raid) — concrete migration recipes.
+- [How to Define a Custom Command in Raid](/blog/how-to-define-a-custom-command-in-raid) — Raid's task model in detail.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — first step if Raid sounds right.

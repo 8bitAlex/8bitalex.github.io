@@ -1,0 +1,173 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Stop Maintaining a 50-Line Bash Setup Script',
+  description:
+    'Every team has the script. It works until it doesn\'t. Here\'s how to replace `setup.sh` with something the team can actually rely on — without rewriting your tools.',
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'bootstrap script', 'developer setup script', 'setup.sh',
+    'developer environment', 'shell script', 'developer experience',
+    'devex', 'developer onboarding'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-stop-maintaining-a-50-line-bash-setup-script' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Every long-lived engineering team has the same artifact. It's called `setup.sh`, or `bootstrap.sh`, or `dev-env.sh`. It started as fifteen lines that one engineer wrote on a Friday. Now it's 187 lines, has cross-platform `if [ "$(uname)" = "Darwin" ]` branches in three places, calls a Python script that calls a Ruby script, and exactly one person knows what step 4 actually does.
+
+This is a love letter to that script — and a guide to retiring it.
+
+## 1. Why the script exists
+
+It's not stupid. Every line in `setup.sh` got added for a reason. Someone hit a problem; this fixed it; they committed the fix; someone else picked it up. The script is a fossil record of the team's onboarding pain. That's actually good — it means the pain is *somewhere*, not just in people's heads.
+
+But the script has structural problems no amount of refactoring fixes:
+
+- **It lives in one repo.** If your team has multiple repos, the script is in the "main" one — leaving the others to fend for themselves with READMEs.
+- **It hides its dependencies.** What needs to be installed before `setup.sh` will run? You find out by running it and watching it fail.
+- **It's not idempotent.** Re-running it after a partial failure is a coin flip.
+- **It mixes concerns.** Installing tools, cloning repos, writing config, running migrations, starting services — all interleaved.
+- **It has no clear notion of "environment."** Switching from local to staging is a different code path that mostly didn't get tested.
+- **It can't be inspected without running it.** The README says "run setup.sh." That's not documentation.
+
+It worked for the team's first dozen developers. It's groaning under the next dozen.
+
+## 2. What you actually want instead
+
+The replacement doesn't have to be exotic. The properties you want:
+
+1. **Declarative, not procedural.** A list of *what* the bootstrap does, not *how*. Easier to read, easier to review, easier to skip steps that already ran.
+2. **Idempotent.** Running it twice in a row does the same thing as running it once.
+3. **Inspectable.** You can see what it'll do before it does it.
+4. **Cross-platform without ifs.** The runner handles macOS vs Linux vs Windows; your config doesn't.
+5. **Decomposed.** Cloning a repo and running its install steps are separate phases, not interleaved.
+6. **The same in CI as locally.** No `if [ -z "$CI" ]` branches.
+
+The shape that satisfies all six is a *task runner that reads a config file*, not a shell script.
+
+## 3. The "just use Make" objection
+
+`Make` covers a lot of this. So does `Taskfile`. So does `Just`. They are all real improvements over a shell script — they're declarative, they're inspectable, they're decomposed.
+
+What they don't cover:
+
+- **Multi-repo.** A Makefile lives in one repo. If your bootstrap clones N repos and runs N install steps, you need either N Makefiles (and the discipline to keep them aligned) or one Makefile that knows about all the repos (and now you're back to a setup.sh in YAML form).
+- **Environment switching across repos.** Same problem in a different shape.
+- **Cross-repo commands.** "Run lint across every repo" needs the top-level something.
+
+For a single repo's bootstrap, Make / Taskfile / Just are entirely sufficient. The case for something different starts when your environment spans multiple repos.
+
+## 4. What the replacement looks like
+
+A team-level YAML file describes the system: repos, environments, commands. A small CLI reads it and does the bootstrap:
+
+```yaml
+name: web-platform
+repositories:
+  - { name: api,      path: ~/Developer/api,      url: https://github.com/acme/api.git }
+  - { name: frontend, path: ~/Developer/frontend, url: https://github.com/acme/frontend.git }
+
+install:
+  tasks:
+    - { type: Shell, cmd: 'docker compose -f ./infra/local.yml up -d' }
+    - { type: Wait,  url: localhost:5432, timeout: 60s }
+    - { type: Shell, cmd: ./scripts/migrate.sh }
+    - { type: Shell, cmd: ./scripts/seed.sh }
+```
+
+Plus each repo can commit its own install steps in a `raid.yaml`:
+
+```yaml
+# api/raid.yaml
+install:
+  tasks:
+    - { type: Shell, cmd: go mod download }
+    - { type: Shell, cmd: go generate ./... }
+```
+
+`raid install` walks all of it in the right order. No bash, no `uname` branches, no "did this step run already?" — the runner handles it.
+
+## 5. The transition: don't rewrite, wrap
+
+The mistake teams make when retiring `setup.sh` is rewriting every line. Don't. The shell logic in your script is mostly correct — it's been debugged over years. Wrap it instead.
+
+A reasonable migration:
+
+1. **Start a new config alongside the script** (`raid.yaml`, `Taskfile.yml`, whatever you pick). Don't delete `setup.sh` yet.
+2. **Have the new config call existing script chunks.** A single `Shell` task that runs `./setup.sh --step bootstrap-db` is fine for now.
+3. **Migrate pieces one at a time.** Move "clone repos" into the runner's clone primitive. Move "wait for Postgres" into a `Wait` task. Move "run migrations" into a `Shell` task that calls the existing migration script.
+4. **Once the runner is doing everything, retire `setup.sh`.** By this point it's a thin wrapper around primitives the runner already understands.
+
+The script can coexist with the new tool for a quarter. Eventually everyone uses the new tool, and the script can be deleted in one PR.
+
+## 6. The replacement isn't a config-management framework
+
+To be clear: this *isn't* Chef / Puppet / Ansible / Pulumi. Those tools are for managing servers. The thing you're replacing `setup.sh` with is a *developer-environment task runner* — much lighter, much more local, much more concerned with "did the dev's machine just bootstrap correctly?" than with "is server X in compliance state Y?"
+
+Don't reach for a heavyweight config-management tool here. The bar is "small CLI + YAML file." Anything more is overkill.
+
+## 7. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this shape — a small Go binary that reads a YAML profile and replaces the pile-of-bash with a declarative bootstrap. The full onboarding command becomes `raid install`, the env switch is `raid env local`, and CI runs the same thing your developers do.
+
+You don't have to use Raid. The point is that **`setup.sh` is a symptom**, not a solution. The real problem is that the team's bootstrap isn't versioned, declarative, or inspectable. Replace those three properties with anything you like.
+
+## Next steps
+
+- [How to Add a `raid.yaml` to an Existing Repo](/blog/how-to-add-a-raid-yaml-to-an-existing-repo) — start small with one repo's bootstrap.
+- [How to Clone All Your Team's Repos with `raid install`](/blog/how-to-clone-all-your-team-repos-with-raid-install) — the multi-repo install primitive.
+- [How to Migrate from Make, Taskfile, or Just to Raid](/blog/how-to-migrate-from-make-taskfile-just-to-raid) — wrapping existing tooling, not replacing it.
