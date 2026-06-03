@@ -1,0 +1,75 @@
+import image from './uppy.png'
+
+export const project = {
+  order: 2,
+  title: 'Uppy',
+  description:
+    'A silly co-op multiplayer browser game built entirely on the Cloudflare edge stack. Tap to keep the balloon airborne; the more players in your lobby, the harder it gets — and the higher you can score together.',
+  abstract: (
+    <div>
+      <p>
+        Uppy is a real-time multiplayer browser game where players tap together to keep a balloon in the air. A short
+        per-player cooldown forces cooperation, a bird tries to pop the balloon, and difficulty scales with lobby size.
+      </p>
+      <br />
+      <p>
+        The interesting part is the backend: there are no traditional servers anywhere. Each lobby runs as its own
+        Cloudflare Durable Object — consistent shared state for every connected client, WebSocket fan-out built in. Auth,
+        scores, and profiles persist in D1. Magic-link login goes through Cloudflare Email Service. The whole thing
+        deploys with a single <code>wrangler deploy</code>.
+      </p>
+      <br />
+      <p>
+        Built as a learning project for Cloudflare's edge platform — and as an excuse to ship something silly. Free to
+        play, works on phones.
+      </p>
+    </div>
+  ),
+  startDate: '2026-5-15',
+  date: '2026-6-2',
+  image: image,
+  href: '/projects/uppy',
+  website: 'https://uppygame.com/',
+  status: 'Ongoing',
+  type: 'Multiplayer Game',
+  tags: ['Cloudflare Workers', 'Durable Objects', 'D1', 'Multiplayer', 'TypeScript']
+}
+
+export const metadata = {
+  title: project.title,
+  description: project.description
+}
+
+Uppy is a co-op multiplayer browser game where a balloon is in the air, a bird tries to pop it, and the only way to keep the balloon up is to tap together. Each player has a short cooldown between taps, so coordination matters more than reflexes. The more people in your lobby, the harder it gets — and the higher your collective score can climb.
+
+It's free, works on phones, and takes about ten seconds to join a game.
+
+## The Stack
+
+The whole game runs on Cloudflare's edge platform. No traditional servers anywhere.
+
+- **Cloudflare Workers** — single binary backend, no infrastructure to manage
+- **Durable Objects** — per-lobby state. Each game room is its own DO with consistent state across every connected player, WebSocket fan-out built in
+- **D1** — cross-request persistence for auth, profiles, and scores
+- **Cloudflare Email Service** — magic-link login emails
+- **Cloudflare Access** — gates the dev environment
+- **R2 + Assets binding** — static asset hosting from the same Worker
+- **PostHog** — analytics and in-game feedback surveys
+- **Plain JavaScript on the client** — no framework, no build step, single module
+
+The whole thing deploys with `wrangler deploy`. Total infrastructure cost so far: free tier.
+
+## Why this stack
+
+I wanted to learn Cloudflare's edge platform properly, and a real-time multiplayer game is one of the harder things you can build on it — if it works for a game with sub-100ms per-tick state sync across continents, it'll work for almost anything else. The constraints turned out to be the right ones: forcing every piece of state to live in either a Durable Object or D1 made the architecture obvious in a way that "stand up a server and put Redis next to it" doesn't.
+
+## What I learned
+
+- **Durable Objects are perfect for multiplayer state.** Real-time sync across clients without needing Redis or Pub/Sub — the DO is the source of truth and WebSocket fan-out is built in. No glue code, no separate state service.
+- **The state management is the hard part.** Not the WebSockets, not the rendering — the cooldown logic, the score reconciliation, the rejoin-after-disconnect edge cases. The kind of work that doesn't show up in a tutorial but eats your weekend.
+- **Playtesting with strangers is a different beast.** Real human latency, real weird inputs, real "I clicked, nothing happened for 2 seconds, then 5 things happened" reports. Logs you can't reproduce in dev.
+- **The free tier goes further than you'd expect.** A single Worker, a handful of Durable Objects, a D1 database, and the Email Service — none of it costs anything yet at the volume Uppy runs at.
+
+## Play it
+
+[uppygame.com](https://uppygame.com) — free, no signup required to play (magic-link login is optional, only needed to claim a persistent name and score). Mobile-friendly. There's an in-game feedback prompt after each round; that's the fastest way to tell me what's broken or what would make it better.
