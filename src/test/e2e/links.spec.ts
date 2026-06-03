@@ -19,10 +19,14 @@ test.describe('External and internal links', () => {
     await expect(coffeeLink).toHaveAttribute('href', 'https://www.buymeacoffee.com/8bitalex')
   })
 
-  test('Projects Tracker button has Trello URL', async ({ page }) => {
+  test('Projects page has anchor quick-links to each project', async ({ page }) => {
     await page.goto('/projects')
-    const trackerLink = page.getByRole('link', { name: /Projects Tracker/i })
-    await expect(trackerLink).toHaveAttribute('href', /trello\.com/)
+    // QuickLinks renders one chip per project, each linking to an in-page anchor
+    // matching the project's slug (the section card sets matching id={slug}).
+    const anchorChip = page.locator('a[href^="#"]').first()
+    await expect(anchorChip).toBeVisible()
+    const href = await anchorChip.getAttribute('href')
+    expect(href).toMatch(/^#[a-z0-9-]+$/)
   })
 
   test('404 page home link points to /', async ({ page }) => {
