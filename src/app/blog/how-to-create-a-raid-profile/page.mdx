@@ -1,0 +1,267 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial' as const,
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Create a Raid Profile',
+  description:
+    'Five ways to create a Raid profile — interactive wizard, hand-written YAML, an existing raid.yaml, a Git URL, or a raw file URL — with the trade-offs and when to pick each.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description
+}
+
+A Raid **profile** (`*.raid.yaml`) is the file that describes your team's full multi-repo system: which repositories to clone, what environments exist, and what commands the team uses. Register it once with `raid` and every developer on the team gets the same `raid test`, `raid env staging`, `raid deploy` — running from the same definition.
+
+This tutorial walks through **every way to create a profile**, what each one is good at, and when to pick it.
+
+## 1. Overview
+
+There are five practical ways to create a profile. Pick the one that matches how you want to author and distribute it:
+
+| # | Method                                  | Command                                         | Best for                                                     |
+| - | --------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
+| 1 | Interactive wizard                      | `raid profile create`                           | First-time users, quick local setup                          |
+| 2 | Hand-written YAML                       | `raid profile add ./team.raid.yaml`             | Full control, kept in source control with the team           |
+| 3 | Synthesized from a repo's `raid.yaml`   | `raid profile add ./raid.yaml`                  | Single-repo projects that already ship a `raid.yaml`         |
+| 4 | From a Git repository                   | `raid profile add git@github.com:org/proj.git`  | Sharing a canonical profile across a team or org             |
+| 5 | From a raw file URL                     | `raid profile add https://example.com/x.yaml`   | Pinning to a specific URL — internal wikis, gists, releases  |
+
+All five end up doing the same thing: a profile gets registered with raid and (if it's the first one) set as **active**. You can confirm with `raid profile list`.
+
+## 2. Prerequisites
+
+You need `raid` on your `PATH`. The shortest path on each platform:
+
+```bash
+# macOS
+brew install 8bitalex/tap/raid
+
+# Linux
+curl -fsSL https://raw.githubusercontent.com/8bitalex/raid/main/install.sh | bash
+
+# Windows — download raid_<version>_windows_amd64.zip from the latest release
+#          extract raid.exe and put it somewhere on your PATH
+```
+
+Verify:
+
+```bash
+raid --version
+```
+
+You're ready.
+
+## 3. Method 1: The interactive wizard
+
+The fastest way to a working profile is the built-in wizard. It asks for a name, a save path, and an optional list of repositories, then writes a valid profile to disk and registers it.
+
+```bash
+raid profile create
+```
+
+A typical session looks like this:
+
+```
+Profile name: web-platform
+Save path [~/web-platform.raid.yaml]:
+Add a repository? [y/N]: y
+  Repository name: frontend
+  Repository URL:  https://github.com/acme/frontend.git
+  Local path:      ~/Developer/frontend
+Add another repository? [y/N]: y
+  Repository name: backend
+  Repository URL:  https://github.com/acme/backend.git
+  Local path:      ~/Developer/backend
+Add another repository? [y/N]: n
+
+Profile 'web-platform' set as active.
+Profile 'web-platform' created at /home/you/web-platform.raid.yaml
+
+Create a raid.yaml config for each repository? [y/N]: y
+```
+
+**When to use this method:** you're new to Raid, or you want to bootstrap a profile fast without remembering the schema. The wizard always produces a valid file, and the optional last step scaffolds a `raid.yaml` in each repo for you to flesh out later.
+
+**Trade-off:** the wizard covers the basics — name, repositories, and an optional per-repo `raid.yaml` stub. It does **not** prompt for environments, install steps, or custom commands; you'll add those by editing the file. Which leads us to method 2.
+
+## 4. Method 2: Hand-written YAML
+
+The most powerful method is also the most explicit: write the file yourself, then register it. This is the form that lives in version control alongside your team's repos.
+
+### 4.1. Start with a schema header
+
+Add a `yaml-language-server` comment at the top of the file. Any modern editor (VS Code, JetBrains, Neovim with `yaml-language-server`) will then give you completion, hover docs, and validation against the published schema:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-profile.schema.json
+```
+
+### 4.2. Minimal profile
+
+The smallest valid profile is just a name and a list of repositories:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-profile.schema.json
+name: web-platform
+repositories:
+  - name: frontend
+    path: ~/Developer/frontend
+    url: https://github.com/acme/frontend.git
+  - name: backend
+    path: ~/Developer/backend
+    url: https://github.com/acme/backend.git
+```
+
+Save it (anywhere — `~/web-platform.raid.yaml` is conventional) and register it:
+
+```bash
+raid profile add ~/web-platform.raid.yaml
+raid install   # clones every repo into the path above
+```
+
+### 4.3. Add environments, install steps, and commands
+
+The same file scales up to the full system definition. Environments switch variables and run tasks across every repo at once; `install` runs once when bootstrapping; profile-level `commands` show up as `raid <name>` subcommands:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-profile.schema.json
+name: web-platform
+
+repositories:
+  - name: frontend
+    path: ~/Developer/frontend
+    url: https://github.com/acme/frontend.git
+  - name: backend
+    path: ~/Developer/backend
+    url: https://github.com/acme/backend.git
+
+environments:
+  - name: local
+    variables:
+      - { name: API_URL, value: http://localhost:8080 }
+      - { name: NODE_ENV, value: development }
+  - name: staging
+    variables:
+      - { name: API_URL, value: https://api.staging.acme.com }
+      - { name: NODE_ENV, value: production }
+
+install:
+  tasks:
+    - type: Shell
+      cmd: echo "Bootstrapping web-platform..."
+
+commands:
+  - name: smoke
+    usage: Hit the health endpoint of the active environment
+    tasks:
+      - type: Shell
+        cmd: curl -fsS "$API_URL/healthz"
+```
+
+After `raid profile add`, the new `smoke` command is wired into `raid --help` automatically; `raid env staging` swaps every variable across every repo in one step.
+
+**When to use this method:** anything you want to share with a team. The file is plain YAML, lives in git, and reviews like code.
+
+## 5. Method 3: From an existing `raid.yaml`
+
+Many single-repo projects ship a `raid.yaml` at the root — the repo's own commands and environment config — but no separate profile YAML wrapping it. Raid handles this:
+
+```bash
+raid profile add ./raid.yaml
+```
+
+When the file is literally named `raid.yaml`, raid treats it as a **repo config** and synthesizes a single-repo profile from it. The resulting profile is named after the `name` field inside the file.
+
+**When to use this method:** you're working on a single-repo project that already has a `raid.yaml`, and you want a profile without writing one. Common for OSS — drop the repo on disk, `raid profile add ./raid.yaml`, and you've got the project's commands available immediately.
+
+**Trade-off:** you get exactly one repository in the profile. If you later need to combine it with other repos, switch to method 2.
+
+## 6. Method 4: From a Git repository
+
+The same `raid profile add` accepts a Git URL. Raid shallow-clones the repo to a temp directory and imports every `*.raid.yaml`, `*.raid.yml`, and `profile.json` it finds at the root:
+
+```bash
+raid profile add git@github.com:acme/raid-profiles.git
+# or
+raid profile add https://github.com/acme/raid-profiles.git
+```
+
+What counts as "a Git URL" is anything that responds to `git ls-remote` — the `git@` SSH form, an HTTPS URL ending in `.git`, or a plain HTTPS URL of a repo.
+
+**When to use this method:** you maintain a central repo of profiles for the team or org. A new hire's first `raid` command can be `raid profile add git@github.com:acme/raid-profiles.git` and they're set up.
+
+**Trade-off:** the import is point-in-time — raid copies the contents into your local profile registry, it does not stay linked to the remote. If the upstream profile changes, re-run `raid profile add` (or use the corresponding pull/refresh flow) to pick up the new version.
+
+## 7. Method 5: From a raw file URL
+
+If your profile lives at a stable HTTP(S) URL — a release asset, an internal wiki page that serves YAML, a gist's raw view — register it directly:
+
+```bash
+raid profile add https://example.com/web-platform.raid.yaml
+```
+
+The URL must end in `.yaml`, `.yml`, or `.json`. Raid downloads the file to `~/<name>.raid.yaml`, validates it, and registers it.
+
+**When to use this method:** distributing a single profile file without setting up a Git repo for it. Pinning to a release URL is also a clean way to version a profile — bump the URL when you publish a new version.
+
+## 8. Bonus: multiple profiles in one file
+
+A single file can hold several profiles, separated by YAML document markers (`---`) or as a JSON array. `raid profile add` registers every profile in the file in one command:
+
+```yaml
+name: development
+repositories:
+  - name: frontend
+    path: ~/Developer/frontend
+    url: https://github.com/acme/frontend.git
+---
+name: personal
+repositories:
+  - name: blog
+    path: ~/Developer/blog
+    url: https://github.com/you/blog.git
+---
+name: open-source
+repositories:
+  - name: raid
+    path: ~/Developer/raid
+    url: https://github.com/8bitAlex/raid.git
+```
+
+This pattern is handy for personal setups where you switch between work, side projects, and OSS contributions on the same machine. Use `raid profile <name>` to swap which one is active.
+
+## 9. After creating: verify, list, and switch
+
+Regardless of which method you used, the same three commands let you inspect and manage what's registered:
+
+```bash
+raid profile           # show the currently active profile
+raid profile list      # list every registered profile (active is marked)
+raid profile <name>    # set <name> as the active profile
+raid profile remove <name>   # unregister a profile
+```
+
+Run `raid install` after switching profiles to make sure every repo in the new profile is cloned and bootstrapped.
+
+## 10. Choosing the right method
+
+A quick decision guide:
+
+- **Just getting started?** Method 1 (`raid profile create`) — you'll have a working profile in under a minute.
+- **Building a team-wide setup?** Method 2 (hand-written YAML in source control). Commit the file alongside your repos.
+- **Working on a single repo that already ships a `raid.yaml`?** Method 3 — one command and you're done.
+- **Distributing one profile across an org?** Method 4 (Git URL) — point everyone at the same repo.
+- **Hosting profiles as static files?** Method 5 (raw URL) — works well with release assets or internal wikis.
+
+## 11. Where to go next
+
+Once your profile is registered, the rest of Raid opens up: `raid install` to clone and bootstrap, `raid env <name>` to switch environments across every repo at once, and `raid <your-command>` to run anything you defined under `commands`. Each repo can also commit its own `raid.yaml` to layer per-repo commands and environment overrides on top of the profile — raid merges them automatically at load time.
+
+If you want the design rationale behind the profile model, the [Raid design proposal](/blog/raid-design-proposal) covers the why; the [Raid technical deep dive](/blog/raid-technical-deep-dive) covers the how.
