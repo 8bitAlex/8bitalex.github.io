@@ -1,32 +1,33 @@
 import image from './website.png'
 
 export const project = {
-  order: 1,
+  order: 3,
   title: 'This Website',
   description:
-    'My personal website that showcases my projects, skills, experience, and acts as a central hub for my professional online presence.',
+    'My personal website — portfolio, blog, and the central hub for my professional online presence. Built with Next.js + TypeScript + Tailwind, content in MDX, hosted on Cloudflare Pages.',
   abstract: (
     <div>
       <p>
-        My personal website that showcases my projects, skills, experience, and acts as a central hub for my
-        professional online presence.
+        My personal website that showcases projects, hosts the blog where I write about engineering decisions in long
+        form, and acts as the central place I direct people who want to understand how I work.
       </p>
       <br />
       <p>
-        Built using TypeScript, Tailwind CSS, React, and Next.js — among a few other things. It's open-source and hosted
-        on Cloudflare Pages.
+        Built with TypeScript, React, Next.js (App Router), and Tailwind CSS v4. Long-form content lives in MDX
+        alongside the code, not in a separate CMS. Hosted on Cloudflare Pages, instrumented with PostHog and Google
+        Analytics. Open-source so anyone can fork it as a starting point for their own site.
       </p>
     </div>
   ),
-  startDate: '2025-5-1',
-  date: '2025-5-18',
+  startDate: '2025-05-01',
+  date: '2026-06-01',
   image: image,
   href: '/projects/website',
   repo: 'https://github.com/8bitAlex/8bitalex.github.io',
   website: 'https://www.alexsalerno.dev',
   status: 'Ongoing',
   type: 'Web Development',
-  tags: ['Web App', 'Typescript', 'Open-Source']
+  tags: ['Web App', 'TypeScript', 'Next.js', 'MDX', 'Open-Source']
 }
 
 export const metadata = {
@@ -45,6 +46,11 @@ Built with Next.js 15 App Router and React 19, written in TypeScript, styled wit
 - **MDX** — content that lives alongside the code, not in a CMS
 - **Cloudflare Pages** — fast global delivery, zero cold starts
 - **Framer Motion** — page transitions and scroll-driven animations
+- **PostHog + Google Analytics** — product analytics + traffic measurement; PostHog routed through `/ingest` so ad-blockers don't drop it
+
+## The Blog
+
+A real blog now lives at [/blog](/blog). It's where I write engineering retrospectives and design proposals in long form — substantive posts, not link-roundups. The first two cover [Raid's design proposal](/blog/raid-design-proposal) and its [technical deep dive a year later](/blog/raid-technical-deep-dive).
 
 ## Design
 

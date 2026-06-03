@@ -1,37 +1,38 @@
 import image from './raid-promo.svg'
 
 export const project = {
-  order: 2,
+  order: 1,
   title: 'Raid',
   description:
     'An open-source command-line tool that orchestrates distributed application development — managing repositories, environments, dependencies, and testing across multi-repo codebases from a single configurable YAML system.',
   abstract: (
     <div>
       <p>
-        Raid is a configurable CLI application built in Go that orchestrates common development tasks, environments, and
-        dependencies across distributed code repositories.
+        Raid is a configurable CLI built in Go that orchestrates common development tasks, environments, and
+        dependencies across distributed code repositories — driven by a single, declarative YAML profile.
       </p>
       <br />
       <p>
-        It solves the complexity of working across multiple repos by automating onboarding, environment setup,
-        dependency management, and parallel test execution — all driven by a portable, declarative YAML configuration.
+        It started as an internal script runner for a team I worked with at Workday, grew over a few years into
+        something genuinely useful, and was rewritten as an open-source Go tool that's now approaching v1.0.
       </p>
       <br />
       <p>
-        Developers can group repositories into <em>Profiles</em>, define custom commands, and run everything from a
-        single tool — no more tribal knowledge, scattered scripts, or manual wrangling of distributed systems.
+        Notable design choices: declarative-over-imperative YAML, multi-repo as a first-class concept, agent-native via
+        the Model Context Protocol (every command and resource is exposed to AI agents through the same surface a human
+        uses), and opt-in telemetry with full transparency about what's collected.
       </p>
     </div>
   ),
-  startDate: '2025-6-23',
-  date: '2025-6-23',
+  startDate: '2025-03-15',
+  date: '2026-06-01',
   image: image,
   href: '/projects/raid',
   repo: 'https://github.com/8bitAlex/raid',
   website: 'https://raidcli.dev/',
-  status: 'In Development',
+  status: 'Approaching v1.0',
   type: 'Developer Tooling',
-  tags: ['CLI', 'Go', 'Open-Source', 'DevOps']
+  tags: ['CLI', 'Go', 'Open-Source', 'DevOps', 'MCP']
 }
 
 export const metadata = {
@@ -47,18 +48,24 @@ Modern software development often spans multiple repositories, each with its own
 
 ## The Solution
 
-Raid brings it all together under one tool. Define your repositories, environments, and dependencies once in a YAML _Profile_, and Raid handles the rest: cloning repos, spinning up environments, managing dependencies, running tests in parallel, and executing custom commands — anywhere, anytime.
+Raid brings it all together under one tool. Define your repositories, environments, and dependencies once in a YAML _Profile_, and Raid handles the rest: cloning repos, spinning up environments, running tests in parallel, and executing custom commands — anywhere, anytime.
 
 ## Key Features
 
 - **Repository Management** — automates cloning, syncing, and dependency tracking across repos
 - **Environment Management** — consistent local environments via `.env` files and Docker support
 - **Parallel Test Execution** — runs tests across all repos concurrently and aggregates results
-- **Custom Commands** — package bespoke scripts alongside the config so nothing gets lost
-- **Declarative YAML Config** — portable, self-documenting profiles that travel with the project
+- **Custom Commands** — typed task primitives (Shell, Script, HTTP, Wait, Group, Git, Prompt, Confirm, Set, Print, Template) so workflows compose without becoming a scripting language
+- **Agent-native via MCP** — every command and resource is exposed to AI agents (Claude, Cursor, etc.) through a Model Context Protocol server, so agents work inside a Raid workspace as naturally as a human does
+- **Opt-in telemetry, transparent** — no events leave the user's machine without explicit consent; `raid telemetry preview` shows the exact JSON payload before you agree to anything
+- **Declarative YAML config** — portable, self-documenting profiles that travel with the project
+- **Single binary, cross-platform** — macOS, Linux, Windows; same YAML, same behavior, no daemon
 
 ## Built With
 
-Go, Cobra CLI, YAML configuration, concurrent task execution via goroutines.
+Go, Cobra CLI, MCP server (`mark3labs/mcp-go`), GoReleaser for cross-platform release builds, distributed via a Homebrew tap (`8bitalex/tap`).
 
-Read the full design proposal on the [blog](/blog/raid-design-proposal).
+## Read More
+
+- [Building Raid: A Technical Deep Dive](/blog/raid-technical-deep-dive) — the full retrospective: architecture, key design decisions (including agent-native MCP integration), what I'd do differently, and the path to v1.0
+- [Raid: A Tool for Orchestrating Distributed Application Development](/blog/raid-design-proposal) — the original design proposal that kicked off the open-source rewrite
