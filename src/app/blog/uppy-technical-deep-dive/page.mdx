@@ -155,7 +155,17 @@ Three things to notice. At N=1 (solo), the cooldown is **1.5 seconds**, which fe
 <div style={{margin: '2rem 0', textAlign: 'center'}}>
 <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
   <defs>
-    <style>{}</style>
+    <style>{`
+      .axis { stroke: #111; stroke-width: 1.5; fill: none; }
+      .grid { stroke: #ddd; stroke-width: 1; fill: none; stroke-dasharray: 3 3; }
+      .curve { stroke: #2563eb; stroke-width: 2.5; fill: none; }
+      .limit { stroke: #dc2626; stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+      .ref { stroke: #888; stroke-width: 1; fill: none; stroke-dasharray: 4 4; }
+      .lbl { font: 500 11px -apple-system, sans-serif; fill: #333; }
+      .lbl-axis { font: 600 12px -apple-system, sans-serif; fill: #111; }
+      .lbl-curve { font: 600 11px -apple-system, sans-serif; }
+      .dot { fill: #2563eb; }
+    `}</style>
   </defs>
   {/* Plot area: x 60..680 (linear N 0..200, x=60+N*3.1), y 30..300 (0..18 sec, y=300-cd*15) */}
   <line className="grid" x1="60" y1="300" x2="680" y2="300" />
@@ -211,7 +221,16 @@ The second graph is the one that actually drives the gameplay feel. If everyone 
 <div style={{margin: '2rem 0', textAlign: 'center'}}>
 <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
   <defs>
-    <style>{}</style>
+    <style>{`
+      .axis { stroke: #111; stroke-width: 1.5; fill: none; }
+      .grid { stroke: #ddd; stroke-width: 1; fill: none; stroke-dasharray: 3 3; }
+      .curve { stroke: #16a34a; stroke-width: 2.5; fill: none; }
+      .ref { stroke: #888; stroke-width: 1; fill: none; stroke-dasharray: 4 4; }
+      .lbl { font: 500 11px -apple-system, sans-serif; fill: #333; }
+      .lbl-axis { font: 600 12px -apple-system, sans-serif; fill: #111; }
+      .lbl-curve { font: 600 11px -apple-system, sans-serif; }
+      .dot { fill: #16a34a; }
+    `}</style>
   </defs>
   {/* Plot area: x 60..680 (linear N 0..200), y 30..300 (0..14 cps) */}
   <line className="grid" x1="60" y1="300" x2="680" y2="300" />
