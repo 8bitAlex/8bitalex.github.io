@@ -28,7 +28,7 @@ export default async function Blog() {
             {allTags.map((tag) => (
               <a
                 key={tag}
-                href={`/blog/tags/${tag.toLowerCase()}`}
+                href={`/blog/tags/${encodeURIComponent(tag.toLowerCase())}`}
                 className="inline-flex items-center rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium text-neutral-700 transition hover:border-neutral-950 hover:bg-neutral-950 hover:text-white"
               >
                 {tag}

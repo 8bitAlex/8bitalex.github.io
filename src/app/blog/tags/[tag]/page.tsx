@@ -32,8 +32,9 @@ async function findTagDisplayName(slug: string): Promise<string | null> {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { tag } = await params
-  const display = await findTagDisplayName(tag)
-  if (!display) return { title: 'Tag' }
+  const slug = tag.toLowerCase()
+  const display = await findTagDisplayName(slug)
+  if (!display) notFound()
   return {
     title: `${display} — Blog`,
     description: `Blog posts tagged ${display}.`
@@ -42,10 +43,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function TagPage({ params }: Params) {
   const { tag } = await params
-  const display = await findTagDisplayName(tag)
+  const slug = tag.toLowerCase()
+  const display = await findTagDisplayName(slug)
   if (!display) notFound()
   const articles = (await loadPosts()).filter((p) =>
-    (p.tags ?? []).some((t) => t.toLowerCase() === tag)
+    (p.tags ?? []).some((t) => t.toLowerCase() === slug)
   )
 
   return (
