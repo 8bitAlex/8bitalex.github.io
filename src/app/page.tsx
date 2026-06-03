@@ -23,7 +23,7 @@ export default async function Home() {
 
       <AboutMe />
 
-      <FeaturedPosts posts={posts} />
+      <FeaturedPosts posts={posts.slice(0, 3)} />
 
       <Projects />
     </>
