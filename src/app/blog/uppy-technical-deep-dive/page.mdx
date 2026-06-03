@@ -1,0 +1,395 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGamepad } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  icon: faGamepad,
+  date: '2026-06-02',
+  title: 'Building Uppy: A Technical Deep Dive',
+  description:
+    'A silly co-op multiplayer browser game built entirely on the Cloudflare edge stack. Why Durable Objects are the right primitive for multiplayer state, the math behind the cooldown that makes the game cooperative instead of competitive, and what it taught me about WebSockets at scale.'
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description
+}
+
+I built a silly little multiplayer browser game called [Uppy](https://uppygame.com) — tap to keep the balloon airborne, the more players in your lobby the harder it gets, there's a bird trying to pop the balloon. The game is dumb on purpose. What's interesting is the stack underneath: there are no traditional servers anywhere. The entire backend is a Cloudflare Worker plus per-lobby Durable Objects plus D1 for persistence. It deploys with one `wrangler deploy`. Total infrastructure cost so far: free tier.
+
+This post is the technical retrospective: why this stack, the math behind the cooldown that makes Uppy feel cooperative instead of competitive, and what I learned about running real-time multiplayer at the edge.
+
+## Why Build It
+
+The honest answer is: I wanted to make a silly game and learn WebSockets at scale. That's it. Most tutorials of "real-time multiplayer on Cloudflare" stop at chat or a shared cursor; I wanted something with actual game state — physics, score, hazards — that has to stay consistent across every connected player at multiple ticks per second. If it works for a game with sub-100ms per-tick state sync across continents, it'll work for almost anything else I'd build on this platform later.
+
+The "silly" part wasn't accidental either. The whole point of a learning project is that nobody's depending on it, so you can take design risks that would feel reckless in a paid product. Tap-a-balloon is one of those risks.
+
+## Design Goals
+
+Three principles drove the calls that mattered:
+
+- **Cooperative, not competitive.** Every player should feel like part of the team. As the lobby grows, individual players should feel *more* dependent on strangers, not less. The cooldown formula (more on this below) is the mechanism, but the goal came first.
+- **Zero friction to start playing.** Open the page, pick a nickname, you're in. Magic-link login exists but is strictly optional — only needed if you want to claim a persistent name and a score on the leaderboard.
+- **One thumb, mobile-first.** The whole game can be played with one thumb. Landscape orientation is enforced because the playfield is wider than it is tall.
+
+A few smaller principles supported those: no signup wall, no installable client, no daemon to run, no third-party state service. If a player can press one button to play, that's the bar.
+
+## What's Already Out There
+
+I wasn't trying to replace any of these — Uppy exists in a deliberately weird genre — but it's worth grounding the design in adjacent work.
+
+| Game | What it does well | Why Uppy isn't that |
+|---|---|---|
+| **agar.io / slither.io** | Open-lobby multiplayer with simple controls | Competitive — Uppy is cooperative by construction |
+| **Cookie Clicker (multiplayer mods)** | Tap economy that scales with players | No state shared across players — each one runs their own simulation |
+| **The Button (reddit, 2015)** | Forced cooperation through a shared resource | Single global lobby, no game loop, ran once |
+| **Curiosity: What's Inside the Cube?** | Massively-multiplayer tap mechanic with collective goal | One-shot, single global game, no per-lobby state |
+
+The closest cousin in spirit is **The Button** — a shared cooperative tap mechanic with a real penalty for failure. Uppy borrows that energy and makes it a repeatable, per-lobby game with a satisfying short loop.
+
+## Architecture Overview
+
+The whole thing runs on Cloudflare's edge platform. Five primary moving parts:
+
+<div style={{margin: '2rem 0', textAlign: 'center'}}>
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
+  <defs>
+    <style>{`
+      .box { fill: #fafafa; stroke: #111; stroke-width: 1.5; }
+      .layer { fill: #f4f4f4; stroke: #888; stroke-width: 1; stroke-dasharray: 4 4; }
+      .lbl { font: 600 13px -apple-system, sans-serif; fill: #111; }
+      .lbl-sm { font: 500 10px -apple-system, sans-serif; fill: #444; }
+      .lbl-layer { font: 600 11px -apple-system, sans-serif; fill: #666; text-transform: uppercase; letter-spacing: 0.06em; }
+    `}</style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#111" />
+    </marker>
+  </defs>
+
+  <rect className="layer" x="20" y="20" width="680" height="70" rx="6" />
+  <text className="lbl-layer" x="34" y="42">Clients</text>
+  <rect className="box" x="80" y="50" width="160" height="30" rx="4" />
+  <text className="lbl" x="160" y="70" textAnchor="middle">Browser (plain JS)</text>
+  <rect className="box" x="280" y="50" width="160" height="30" rx="4" />
+  <text className="lbl" x="360" y="70" textAnchor="middle">Browser (plain JS)</text>
+  <rect className="box" x="480" y="50" width="160" height="30" rx="4" />
+  <text className="lbl" x="560" y="70" textAnchor="middle">Browser (plain JS)</text>
+
+  <rect className="layer" x="20" y="110" width="680" height="70" rx="6" />
+  <text className="lbl-layer" x="34" y="132">Edge (Cloudflare Worker)</text>
+  <rect className="box" x="200" y="140" width="320" height="30" rx="4" />
+  <text className="lbl" x="360" y="160" textAnchor="middle">Routing + Asset serving + Lobby gateway</text>
+
+  <rect className="layer" x="20" y="200" width="680" height="70" rx="6" />
+  <text className="lbl-layer" x="34" y="222">Per-Lobby State</text>
+  <rect className="box" x="100" y="230" width="140" height="30" rx="4" />
+  <text className="lbl" x="170" y="250" textAnchor="middle">LobbyDO (game tick)</text>
+  <rect className="box" x="260" y="230" width="140" height="30" rx="4" />
+  <text className="lbl" x="330" y="250" textAnchor="middle">LobbyDO (game tick)</text>
+  <rect className="box" x="420" y="230" width="200" height="30" rx="4" />
+  <text className="lbl" x="520" y="250" textAnchor="middle">RegistryDO (matchmaking)</text>
+
+  <rect className="layer" x="20" y="290" width="680" height="50" rx="6" />
+  <text className="lbl-layer" x="34" y="312">Persistence + Auth</text>
+  <rect className="box" x="120" y="305" width="160" height="25" rx="4" />
+  <text className="lbl" x="200" y="322" textAnchor="middle">D1 (users, scores)</text>
+  <rect className="box" x="320" y="305" width="200" height="25" rx="4" />
+  <text className="lbl" x="420" y="322" textAnchor="middle">CF Email (magic-link login)</text>
+  <rect className="box" x="540" y="305" width="160" height="25" rx="4" />
+  <text className="lbl" x="620" y="322" textAnchor="middle">PostHog (analytics)</text>
+
+  <path d="M160 80 L160 140" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+  <path d="M360 80 L360 140" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+  <path d="M560 80 L560 140" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+  <path d="M280 170 L170 230" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+  <path d="M360 170 L330 230" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+  <path d="M440 170 L520 230" stroke="#111" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+</svg>
+</div>
+
+The Worker handles routing, serves static assets, and acts as a gateway that hands each incoming connection to the right Durable Object. **Each lobby is its own DO** with its own consistent state, its own game tick, and its own WebSocket fan-out. The DO is the source of truth — there is no Redis, no Pub/Sub, no separate state service.
+
+The whole thing fits the Cloudflare free tier comfortably. A single Worker, a handful of Durable Objects per active lobby (they spin down when idle), a small D1 database, and the Email Service for magic-link login.
+
+## The Mental Model
+
+```
+Lobby (a single Durable Object)
+├── Connected players (via WebSocket, fan-out built into the DO)
+│   ├── Per-player cooldown
+│   └── Per-player palette + nickname + score contribution
+├── Balloon physics (position, velocity, score)
+├── Bird hazard (spawns randomly, tries to pop the balloon)
+└── Game state (waiting | playing | ended)
+```
+
+Joining a game means: client opens a WebSocket → Worker resolves the lobby code to the matching DO → DO accepts the socket and starts broadcasting tick snapshots. Every tick (15 Hz) the DO computes the new state and pushes a compact binary snapshot to every connected client. Clicks come back as small messages, get validated against the player's cooldown, and either apply or get rejected.
+
+Two things to call out:
+
+- **The DO is single-threaded and request-serialized.** There is no concurrent-access pattern to defend against. You don't need locks, you don't need transactions, you don't need consensus — the DO is the sequencer. Every player's tap goes through the same point.
+- **WebSocket fan-out is built in.** No glue code, no separate state service. The DO holds the connection list, computes the snapshot, and broadcasts. This is the killer feature for multiplayer.
+
+## Key Design Decisions
+
+### Why Cloudflare's edge platform
+
+I wanted to learn this platform properly. A real-time multiplayer game is one of the harder things you can build on it, because the assumptions Cloudflare makes about Workers (short-lived, request-response, no shared state) break completely once you need long-lived connections and stateful game ticks. Durable Objects fill that gap, and they fill it well — but you have to design around them.
+
+The constraints turned out to be the right ones. Forcing every piece of state to live in either a Durable Object or D1 made the architecture obvious in a way that "stand up a server and put Redis next to it" doesn't. There's no fourth thing. If state needs to be hot, it goes in the DO. If it needs to survive a DO eviction, it goes in D1. That's the entire decision tree.
+
+### The cooldown formula
+
+This is the most interesting design decision in Uppy, and the one I want to spend the most time on.
+
+Every player has a per-tap cooldown. After you tap, you can't tap again for some number of seconds. The number depends on how many players are in your lobby. The formula:
+
+```
+cooldown_ms(N) = min(15000, round(1500 + 2032 · log₂(max(1, N))))
+```
+
+Three things to notice. At N=1 (solo), the cooldown is **1.5 seconds**, which feels snappy. The constant **2032** was picked empirically — playtest, tweak, playtest, tweak — until the curve felt right at small and medium lobbies. And there's a **hard cap at 15 seconds**, so no individual player ever has to wait longer than that regardless of how big the lobby gets.
+
+Here's how the per-player cooldown scales:
+
+<div style={{margin: '2rem 0', textAlign: 'center'}}>
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
+  <defs>
+    <style>{`
+      .axis { stroke: #111; stroke-width: 1.5; fill: none; }
+      .grid { stroke: #ddd; stroke-width: 1; fill: none; stroke-dasharray: 3 3; }
+      .curve { stroke: #2563eb; stroke-width: 2.5; fill: none; }
+      .limit { stroke: #dc2626; stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+      .lbl { font: 500 11px -apple-system, sans-serif; fill: #333; }
+      .lbl-axis { font: 600 12px -apple-system, sans-serif; fill: #111; }
+      .lbl-curve { font: 600 11px -apple-system, sans-serif; }
+      .dot { fill: #2563eb; }
+    `}</style>
+  </defs>
+  {/* Plot area: x 60..680 (620px), y 30..300 (270px). X: log2(N) from 0 (N=1) to 9 (N=512). Y: 0..18 seconds */}
+  {/* Grid lines (Y at every 3s) */}
+  <line className="grid" x1="60" y1="300" x2="680" y2="300" />
+  <line className="grid" x1="60" y1="255" x2="680" y2="255" />
+  <line className="grid" x1="60" y1="210" x2="680" y2="210" />
+  <line className="grid" x1="60" y1="165" x2="680" y2="165" />
+  <line className="grid" x1="60" y1="120" x2="680" y2="120" />
+  <line className="grid" x1="60" y1="75" x2="680" y2="75" />
+  <line className="grid" x1="60" y1="30" x2="680" y2="30" />
+  {/* X gridlines at log-spaced N values */}
+  <line className="grid" x1="60" y1="30" x2="60" y2="300" />
+  <line className="grid" x1="129" y1="30" x2="129" y2="300" />
+  <line className="grid" x1="198" y1="30" x2="198" y2="300" />
+  <line className="grid" x1="267" y1="30" x2="267" y2="300" />
+  <line className="grid" x1="336" y1="30" x2="336" y2="300" />
+  <line className="grid" x1="404" y1="30" x2="404" y2="300" />
+  <line className="grid" x1="473" y1="30" x2="473" y2="300" />
+  <line className="grid" x1="542" y1="30" x2="542" y2="300" />
+  <line className="grid" x1="611" y1="30" x2="611" y2="300" />
+  <line className="grid" x1="680" y1="30" x2="680" y2="300" />
+  {/* 15s limit line */}
+  <line className="limit" x1="60" y1="75" x2="680" y2="75" />
+  <text className="lbl-curve" fill="#dc2626" x="670" y="68" textAnchor="end">15s hard cap</text>
+  {/* The curve. Sample at log2 stops, points = (60 + log2(N)/9 * 620, 300 - cd(N)/18 * 270) */}
+  {/* N=1 (log2=0, cd=1.5): x=60, y=300 - 1.5/18*270 = 300-22.5 = 277.5 */}
+  {/* N=2 (log2=1, cd=3.53): x=128.9, y=300 - 53 = 247 */}
+  {/* N=4 (log2=2, cd=5.56): x=197.8, y=300 - 83.4 = 216.6 */}
+  {/* N=8 (log2=3, cd=7.6): x=266.7, y=300 - 114 = 186 */}
+  {/* N=16 (log2=4, cd=9.63): x=335.6, y=300 - 144.45 = 155.55 */}
+  {/* N=32 (log2=5, cd=11.66): x=404.4, y=300 - 174.9 = 125.1 */}
+  {/* N=64 (log2=6, cd=13.69): x=473.3, y=300 - 205.35 = 94.65 */}
+  {/* N=100 cap (log2=6.64, cd=15): x=60+6.64/9*620=60+457.7=517.7, y=75 */}
+  {/* N=128 (log2=7, cd=15): x=542.2, y=75 */}
+  {/* N=256 (log2=8, cd=15): x=611.1, y=75 */}
+  {/* N=512 (log2=9, cd=15): x=680, y=75 */}
+  <polyline className="curve" points="60,277.5 128.9,247 197.8,216.6 266.7,186 335.6,155.55 404.4,125.1 473.3,94.65 517.7,75 680,75" />
+  {/* Inflection dot */}
+  <circle className="dot" cx="517.7" cy="75" r="4" />
+  <text className="lbl-curve" fill="#2563eb" x="525" y="93">cap at N≈100</text>
+  {/* Axes */}
+  <line className="axis" x1="60" y1="30" x2="60" y2="300" />
+  <line className="axis" x1="60" y1="300" x2="680" y2="300" />
+  {/* Y axis labels */}
+  <text className="lbl" x="55" y="304" textAnchor="end">0</text>
+  <text className="lbl" x="55" y="259" textAnchor="end">3</text>
+  <text className="lbl" x="55" y="214" textAnchor="end">6</text>
+  <text className="lbl" x="55" y="169" textAnchor="end">9</text>
+  <text className="lbl" x="55" y="124" textAnchor="end">12</text>
+  <text className="lbl" x="55" y="79" textAnchor="end">15</text>
+  <text className="lbl" x="55" y="34" textAnchor="end">18</text>
+  <text className="lbl-axis" x="20" y="165" textAnchor="middle" transform="rotate(-90, 20, 165)">Cooldown (seconds)</text>
+  {/* X axis labels — N values at log2 stops */}
+  <text className="lbl" x="60" y="318" textAnchor="middle">1</text>
+  <text className="lbl" x="129" y="318" textAnchor="middle">2</text>
+  <text className="lbl" x="198" y="318" textAnchor="middle">4</text>
+  <text className="lbl" x="267" y="318" textAnchor="middle">8</text>
+  <text className="lbl" x="336" y="318" textAnchor="middle">16</text>
+  <text className="lbl" x="404" y="318" textAnchor="middle">32</text>
+  <text className="lbl" x="473" y="318" textAnchor="middle">64</text>
+  <text className="lbl" x="542" y="318" textAnchor="middle">128</text>
+  <text className="lbl" x="611" y="318" textAnchor="middle">256</text>
+  <text className="lbl" x="680" y="318" textAnchor="middle">512</text>
+  <text className="lbl-axis" x="370" y="345" textAnchor="middle">Players in lobby (log scale)</text>
+</svg>
+<div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>Per-player cooldown vs. lobby size. The curve is logarithmic — each doubling of players adds the same ~2 seconds to the cooldown — until the 15-second cap takes over around 100 players.</div>
+</div>
+
+The first thing to notice is that **doubling the number of players adds the same fixed cost to the cooldown, not a multiplicative one**. From 1 to 2 players adds ~2 seconds. From 2 to 4 adds ~2 seconds. From 4 to 8 adds ~2 seconds. Logarithmic by construction. The result is that at small lobby sizes (2–8 people, the sweet spot for actual play sessions) the cooldown grows quickly enough that players feel the pressure mounting, but the floor (1.5 seconds) and ceiling (15 seconds) keep both ends of the range playable.
+
+The second graph is the one that actually drives the gameplay feel. If everyone in the lobby is tapping at the maximum allowed rate, how many taps per second can the lobby collectively produce?
+
+<div style={{margin: '2rem 0', textAlign: 'center'}}>
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style={{maxWidth: '100%', height: 'auto'}}>
+  <defs>
+    <style>{`
+      .axis { stroke: #111; stroke-width: 1.5; fill: none; }
+      .grid { stroke: #ddd; stroke-width: 1; fill: none; stroke-dasharray: 3 3; }
+      .curve { stroke: #16a34a; stroke-width: 2.5; fill: none; }
+      .ref { stroke: #888; stroke-width: 1; fill: none; stroke-dasharray: 4 4; }
+      .lbl { font: 500 11px -apple-system, sans-serif; fill: #333; }
+      .lbl-axis { font: 600 12px -apple-system, sans-serif; fill: #111; }
+      .lbl-curve { font: 600 11px -apple-system, sans-serif; }
+      .dot { fill: #16a34a; }
+    `}</style>
+  </defs>
+  {/* Plot area: x 60..680, y 30..300. X: linear N from 0 to 200. Y: 0..14 clicks/sec */}
+  {/* Gridlines */}
+  <line className="grid" x1="60" y1="300" x2="680" y2="300" />
+  <line className="grid" x1="60" y1="261" x2="680" y2="261" />
+  <line className="grid" x1="60" y1="223" x2="680" y2="223" />
+  <line className="grid" x1="60" y1="184" x2="680" y2="184" />
+  <line className="grid" x1="60" y1="146" x2="680" y2="146" />
+  <line className="grid" x1="60" y1="107" x2="680" y2="107" />
+  <line className="grid" x1="60" y1="69" x2="680" y2="69" />
+  <line className="grid" x1="60" y1="30" x2="680" y2="30" />
+  {/* X grid every 25 players: x = 60 + N/200 * 620 */}
+  <line className="grid" x1="60" y1="30" x2="60" y2="300" />
+  <line className="grid" x1="138" y1="30" x2="138" y2="300" />
+  <line className="grid" x1="215" y1="30" x2="215" y2="300" />
+  <line className="grid" x1="293" y1="30" x2="293" y2="300" />
+  <line className="grid" x1="370" y1="30" x2="370" y2="300" />
+  <line className="grid" x1="448" y1="30" x2="448" y2="300" />
+  <line className="grid" x1="525" y1="30" x2="525" y2="300" />
+  <line className="grid" x1="603" y1="30" x2="603" y2="300" />
+  <line className="grid" x1="680" y1="30" x2="680" y2="300" />
+  {/* Inflection at N=100: x = 60 + 100/200*620 = 370 */}
+  <line className="ref" x1="370" y1="30" x2="370" y2="300" />
+  <text className="lbl-curve" fill="#666" x="378" y="44">cap inflection (N≈100)</text>
+  {/* Curve: y = 300 - max_cps(N)/14 * 270 */}
+  {/* Pre-cap (N<100): cps = N / cooldownSec(N). Post-cap (N>=100): cps = N/15 */}
+  {/* Sample dense points to capture the curve */}
+  {/* N=1: cps=0.667, x=60+3.1=63.1, y=300-12.86=287.14 */}
+  {/* N=2: 0.566, x=66.2, y=288.9 */}
+  {/* N=4: 0.719, x=72.4, y=286.13 */}
+  {/* N=8: 1.053, x=84.8, y=279.69 */}
+  {/* N=16: 1.662, x=109.6, y=267.94 */}
+  {/* N=32: 2.744, x=159.2, y=247.07 */}
+  {/* N=50: 3.69, x=215, y=228.81 */}
+  {/* N=64: 4.674, x=258.4, y=209.84 */}
+  {/* N=80: 5.59, x=308, y=192.2 */}
+  {/* N=100: 6.667 (cap inflection), x=370, y=171.43 */}
+  {/* N=125: 8.333, x=447.5, y=139.29 */}
+  {/* N=150: 10, x=525, y=107.14 */}
+  {/* N=175: 11.667, x=602.5, y=75 */}
+  {/* N=200: 13.333, x=680, y=42.86 */}
+  <polyline className="curve" points="63.1,287.14 66.2,288.9 72.4,286.13 84.8,279.69 109.6,267.94 159.2,247.07 215,228.81 258.4,209.84 308,192.2 370,171.43 447.5,139.29 525,107.14 602.5,75 680,42.86" />
+  <circle className="dot" cx="370" cy="171.43" r="4" />
+  {/* Axes */}
+  <line className="axis" x1="60" y1="30" x2="60" y2="300" />
+  <line className="axis" x1="60" y1="300" x2="680" y2="300" />
+  {/* Y labels */}
+  <text className="lbl" x="55" y="304" textAnchor="end">0</text>
+  <text className="lbl" x="55" y="265" textAnchor="end">2</text>
+  <text className="lbl" x="55" y="227" textAnchor="end">4</text>
+  <text className="lbl" x="55" y="188" textAnchor="end">6</text>
+  <text className="lbl" x="55" y="150" textAnchor="end">8</text>
+  <text className="lbl" x="55" y="111" textAnchor="end">10</text>
+  <text className="lbl" x="55" y="73" textAnchor="end">12</text>
+  <text className="lbl" x="55" y="34" textAnchor="end">14</text>
+  <text className="lbl-axis" x="20" y="165" textAnchor="middle" transform="rotate(-90, 20, 165)">Max clicks per second</text>
+  {/* X labels */}
+  <text className="lbl" x="60" y="318" textAnchor="middle">0</text>
+  <text className="lbl" x="138" y="318" textAnchor="middle">25</text>
+  <text className="lbl" x="215" y="318" textAnchor="middle">50</text>
+  <text className="lbl" x="293" y="318" textAnchor="middle">75</text>
+  <text className="lbl" x="370" y="318" textAnchor="middle">100</text>
+  <text className="lbl" x="448" y="318" textAnchor="middle">125</text>
+  <text className="lbl" x="525" y="318" textAnchor="middle">150</text>
+  <text className="lbl" x="603" y="318" textAnchor="middle">175</text>
+  <text className="lbl" x="680" y="318" textAnchor="middle">200</text>
+  <text className="lbl-axis" x="370" y="345" textAnchor="middle">Players in lobby (linear scale)</text>
+</svg>
+<div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>Max collective tap rate (N ÷ cooldown_seconds) vs. lobby size. Below the cap (~100 players) the curve grows sub-linearly — the cooldown is "winning" against the player count. Above the cap, the cooldown stops rising and tap rate grows linearly at N/15.</div>
+</div>
+
+This is where the cooperative-feel design pays off. The pre-cap region — which is where almost all real lobbies live — is sub-linear. **Adding more players helps less than you'd expect.** Going from 8 players to 16 doesn't double your tap rate; it adds maybe 60%. The team isn't getting easier to be on, it's getting harder to keep coordinated. Players who panic-tap waste their cooldown; players who pace themselves contribute more per tap.
+
+The cap at N≈100 is where it flips. Past 100 players the cooldown stops growing, so the lobby's collective tap rate becomes linear in player count. In practice no Uppy lobby has ever needed to live in that regime — it's there as a safety net so the game doesn't become unplayable in some hypothetical viral moment, not as a tuning knob anyone touches.
+
+The whole curve is two parameters and one constant. There's no special-casing, no rubber-banding, no per-player handicap. The game balances itself.
+
+### Per-lobby Durable Object isolation
+
+Each lobby is one Durable Object. They have nothing to do with each other. A crash, a hot-loop, a memory spike in one lobby has zero effect on the others. The blast radius is literally one game.
+
+This is the kind of isolation that on traditional infrastructure you'd build with separate processes or pods, and it'd be expensive enough that you'd think twice about doing it per-lobby. On Cloudflare it's free — the DO model assumes this is how you'd use it. You don't have to design around shared state because there isn't any.
+
+### Plain JavaScript on the client
+
+No framework, no build step, no bundler. The client is one `main.js` module, served as-is from the Worker's assets binding. The whole client-side codebase is ~800 lines.
+
+This was a deliberate choice. The game doesn't need state management beyond a couple of `let`s and a snapshot ring buffer; React would have been net-negative complexity. The performance is great because there's no virtual-DOM layer between the WebSocket message and the canvas redraw — the snapshot decoder writes directly into the state, and the next animation frame picks it up.
+
+### PostHog feedback survey on game-over
+
+After every round, players see a one-question feedback prompt: "How was that game? (1–5)" with an optional text field. The trigger is the existing `balloon_down` analytics event we already fire on round end. PostHog handles the survey display itself; the client is unchanged.
+
+The frequency cap is 7 days per user — heavy players don't get prompted every game, occasional players get the prompt when it matters. The response volume so far is tiny but the responses I've gotten have been disproportionately useful, because they arrive within ten seconds of the moment that produced them.
+
+## The Bird
+
+The bird is the hazard. It enters the playfield, moves around for a bit, and tries to pop the balloon by colliding with it. The randomness it adds is the point — without it, the game would just be a tap-rate-vs-gravity calculation. With it, players have to think about *where* the balloon will be in the next few seconds, not just whether it'll be high enough.
+
+The bird is also the seam where the game gets more interesting. Right now there's one bird with one behavior. Planned: power-ups (slow time, double-strength taps, balloon shield), modifiers (gravity bursts, wind), and probably a porcupine next as a second hazard with a different movement pattern. Each new entity is a new physics interaction without changing the core loop.
+
+If you're an artist who likes weird co-op games and wouldn't mind replacing my programmer art, the door is open. The current visuals are functional, not delightful.
+
+## Implementation Notes
+
+A handful of concrete choices worth recording:
+
+- **Language: TypeScript on the Worker, plain JS on the client.** Server-side type safety where state correctness matters, client-side simplicity where it doesn't.
+- **Binary snapshot protocol over WebSocket.** Each per-tick snapshot is a fixed-size binary buffer (header + balloon state + bird state + variable-length ripple list). JSON would have been simpler but the snapshot is sent 15 times per second to every connected client; bytes matter.
+- **Optimistic local ripples + server-side validation.** When you tap, you see a ripple on the canvas immediately — the local client doesn't wait for the server. If the server rejects the tap (cooldown not yet expired), you see a small "X" mark on the canvas instead of a ripple. The feeling is responsiveness; the behavior is correctness.
+- **D1 for everything that survives a DO eviction.** Users, profiles, scores, nicknames. The DO holds the active game state; D1 holds anything that needs to outlive the game.
+- **Cloudflare Email Service for magic-link login.** No third-party email provider, no SMTP config, no domain verification dance — Cloudflare handles it inside the same dashboard as everything else.
+- **Cloudflare Access on dev.uppygame.com.** The dev environment is gated behind an Access policy. Production is wide open.
+- **No client build step.** Plain ES modules served from the Worker's asset binding. The deploy pipeline is one `wrangler deploy`.
+
+The deliberate non-choice: **no framework on the client, no shared state library on the server.** Both would have looked productive in the short term and become a tax forever after.
+
+## What I Learned
+
+- **Durable Objects are perfect for multiplayer state.** Real-time sync across clients without needing Redis or Pub/Sub. The DO is the source of truth and the fan-out is built in. This is the single most useful primitive Cloudflare has added since Workers themselves.
+- **The state management is the hard part.** Not the WebSockets, not the rendering, not the deployment — the cooldown logic, the score reconciliation, the rejoin-after-disconnect edge cases. Reconnect handling alone took longer than the entire physics layer. The kind of work that doesn't show up in a tutorial but eats your weekend.
+- **Playtesting with strangers is a different beast.** Real human latency, real weird inputs, real "I clicked, nothing happened for two seconds, then five things happened at once" reports. Logs you can't reproduce in dev. The PostHog survey turned out to be the single most useful diagnostic tool for the early period because it gave me unprompted feedback exactly when something memorable had just happened.
+- **The free tier goes further than you'd expect.** A single Worker, a handful of Durable Objects per active lobby, a D1 database, the Email Service. None of it costs anything at the volume Uppy runs at, and the headroom before it would is enormous.
+- **Simple gameplay is harder than it looks.** The cooldown formula took a half-dozen passes before it felt right. Every constant mattered. Every floor and ceiling mattered. The graphs above hide the iteration that produced them.
+
+## The Road Ahead
+
+Three things on the short list:
+
+1. **Power-ups + modifiers.** Slow time, double-strength taps, balloon shields. Gravity bursts, wind. Each one is a new physics interaction layered on top of the existing loop; none of them change the core mechanic.
+2. **A porcupine** as a second hazard with a different movement pattern. The bird darts; the porcupine drifts.
+3. **An artist.** The current visuals are programmer art. The game would be meaningfully more delightful with real character design. If that's you, get in touch.
+
+Beyond those, nothing concrete. I'm letting playtesting drive priorities rather than guessing.
+
+## Closing
+
+Uppy started as a learning project for Cloudflare's edge platform and a silly excuse to ship a game. Both goals turned out to be load-bearing. Picking a real-time multiplayer game as the learning vehicle forced every weak spot in my understanding of Durable Objects, WebSockets, and edge-side state management to surface — and the silliness gave me the permission slip to take design risks I wouldn't have taken on a serious product.
+
+The cooldown formula is the part of the game I'm proudest of, because it does in two parameters what a more conventional design would do with rules, exceptions, and rubber-banding. Logarithmic scaling, hard cap, no special cases. The math balances the game.
+
+Play it at [uppygame.com](https://uppygame.com). It's silly. It works on phones. There's a feedback prompt after every round — that's the fastest way to tell me what's broken or what would make it better.
