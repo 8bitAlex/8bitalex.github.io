@@ -31,10 +31,10 @@ Four principles drove the calls that mattered:
 
 - **Fun first.** This is the load-bearing one. If a design choice would make Uppy more correct or more clever but less fun, the design choice loses. Every other principle below is downstream of this one.
 - **Cooperative, not competitive.** Every player should feel like part of the team. As the lobby grows, individual players should feel *more* dependent on strangers, not less. The cooldown formula (more on this below) is the mechanism, but the goal came first.
-- **Zero friction to start playing.** Open the page, pick a nickname, you're in. Magic-link login exists but is strictly optional — only needed if you want to claim a persistent name and a score on the leaderboard.
+- **Lightweight onboarding, but a real one.** The only ask is an email address — magic-link login, no passwords, no third-party providers. That single ask is the price of entry for everything that comes after: a persistent identity for the cooldown logic, anti-abuse protection against drive-by trolling, and a stable handle for the leaderboard. No ads, no installs, no paywalls, no "free trial" nonsense.
 - **One thumb, mobile-first.** The whole game can be played with one thumb. Landscape orientation is enforced because the playfield is wider than it is tall.
 
-A few smaller principles supported those: no signup wall, no installable client, no daemon to run, no third-party state service. If a player can press one button to play, that's the bar.
+A few smaller principles supported those: no passwords (magic-link only), no installable client, no daemon to run, no third-party state service. Once the player's through the magic-link, joining a lobby is one tap.
 
 ## What's Already Out There
 
