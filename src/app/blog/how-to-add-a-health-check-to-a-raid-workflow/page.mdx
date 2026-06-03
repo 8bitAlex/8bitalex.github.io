@@ -1,0 +1,214 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Add a Health Check to a Raid Workflow',
+  description:
+    'Use the Raid `Wait` task to block on HTTP endpoints or TCP ports until a service is healthy — and pair it with `Group` for retry semantics on flaky deps.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'health check', 'Wait task', 'service readiness',
+    'docker-compose', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-add-a-health-check-to-a-raid-workflow' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+A lot of Raid workflows look like: start a thing, then talk to it. Start the dev server, then run tests against it. Bring up docker-compose, then seed the database. The race between "the service is started" and "the service is ready" eats most of the flaky-test budget on a typical team.
+
+The `Wait` task fixes that. It blocks until an HTTP endpoint returns healthy or a TCP port accepts connections, then lets the next task run.
+
+## 1. The `Wait` task
+
+`Wait` accepts a target and a timeout. The target is either an HTTP URL or a `host:port` TCP address:
+
+```yaml
+- type: Wait
+  url: http://localhost:8080/health
+  timeout: 30s
+```
+
+Raid polls the URL until either:
+
+- it gets a healthy response (HTTP 2xx or 3xx; TCP accept), at which point the task succeeds and the command continues; or
+- the `timeout:` elapses, at which point the task fails with `TASK_WAIT_TIMEOUT` and exit code 3.
+
+The default timeout is 30s. Set it explicitly when you know a service needs longer — `60s`, `2m`, etc. Standard Go duration syntax applies.
+
+## 2. HTTP vs TCP
+
+Both are first-class:
+
+```yaml
+# HTTP — best for app services with a dedicated /health or /healthz route
+- type: Wait
+  url: http://localhost:8080/health
+
+# TCP — best for raw services like postgres, redis, kafka
+- type: Wait
+  url: localhost:5432
+```
+
+For databases and caches, TCP is usually enough — once the port accepts a connection, the protocol layer is ready to handshake. For application services, HTTP gives you a clean signal that the *application* is up, not just the listener.
+
+## 3. The classic "start, wait, work" pattern
+
+The most useful shape — boot infra, wait for it, do something that depends on it:
+
+```yaml
+commands:
+  - name: dev
+    usage: Start the local stack and seed it
+    tasks:
+      - type: Shell
+        cmd: docker compose -f ./infra/local.yml up -d
+      - type: Wait
+        url: localhost:5432
+        timeout: 60s
+      - type: Wait
+        url: http://localhost:8080/health
+        timeout: 60s
+      - type: Shell
+        cmd: ./scripts/seed-db.sh
+      - type: Print
+        message: Stack is up and seeded.
+        color: green
+```
+
+`raid dev` brings up compose, blocks until Postgres and the API are both reachable, seeds the database, and reports.
+
+## 4. Waiting on multiple things in parallel
+
+If two services start independently, fan the waits out — both timers run at once, the command continues when both are ready:
+
+```yaml
+- type: Wait
+  url: http://localhost:8080/health
+  timeout: 60s
+  concurrent: true
+- type: Wait
+  url: http://localhost:8090/health
+  timeout: 60s
+```
+
+See [How to run tasks in parallel with Raid](/blog/how-to-run-tasks-in-parallel-with-raid) for the full concurrent-task model.
+
+## 5. Retry semantics on flaky deps
+
+`Wait` polls but does not "retry" in the usual sense — once it gives up at the timeout, the whole task fails. If the dependency is genuinely flaky and you want explicit retry behavior, wrap the wait in a `Group`:
+
+```yaml
+- type: Group
+  ref: wait-for-api
+  attempts: 3
+  delay: 10s
+```
+
+…and define the `wait-for-api` block elsewhere as a `Wait` (or a `Wait` + a `Shell` healthcheck). The Group will run the block up to three times, waiting 10 seconds between attempts.
+
+## 6. Pairing with `raid install`
+
+`Wait` is especially useful inside profile-level install tasks. After a `docker compose up -d`, wait for the dependencies to come ready before any seeding script runs:
+
+```yaml
+# profile.raid.yaml
+install:
+  tasks:
+    - type: Shell
+      cmd: docker compose -f ./infra/local.yml up -d
+    - type: Wait
+      url: localhost:5432
+      timeout: 60s
+    - type: Wait
+      url: localhost:6379
+      timeout: 30s
+    - type: Shell
+      cmd: ./scripts/migrate.sh
+    - type: Shell
+      cmd: ./scripts/seed.sh
+```
+
+That sequence is what makes `raid install` reliable on day one — no race conditions, no "did Postgres come up yet?" trial-and-error.
+
+## 7. Pre-flight checks before user commands
+
+You can also add `Wait` to user-facing commands as a pre-flight check. If `raid test` needs the API up, declare it:
+
+```yaml
+commands:
+  - name: test
+    usage: Run the integration tests against the local API
+    tasks:
+      - type: Wait
+        url: http://localhost:8080/health
+        timeout: 5s
+      - type: Shell
+        cmd: npm test
+```
+
+If the API isn't running, `raid test` fails fast with a clear "wait timeout" message instead of running the test suite and failing with a confusing connection error.
+
+## 8. Common gotchas
+
+- **Health endpoint that returns 200 too early.** A service can answer `/health` before it's done warming up its connection pool. Make your health endpoint actually check downstream dependencies before returning 200, or wait for a more specific endpoint.
+- **TCP wait against a service behind a proxy.** Waiting on the proxy's port doesn't tell you the upstream is ready. Wait on the actual application endpoint via HTTP instead.
+- **Too-short timeouts in CI.** Cold runners can take 30+ seconds to bring containers up. Be generous in CI — a 60-second timeout that succeeds in 5 is fine; a 5-second timeout that flakes once a week burns hours.
+
+## Next steps
+
+- [How to Run Tasks in Parallel with Raid](/blog/how-to-run-tasks-in-parallel-with-raid) — fan-out waits and Group retry semantics.
+- [How to Clone All Your Team's Repos with `raid install`](/blog/how-to-clone-all-your-team-repos-with-raid-install) — where most health checks naturally fit.
+- [How to Debug a Failing Raid Task](/blog/how-to-debug-a-failing-raid-task) — when the wait times out and you need to figure out why.

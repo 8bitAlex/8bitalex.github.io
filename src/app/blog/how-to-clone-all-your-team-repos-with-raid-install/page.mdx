@@ -1,0 +1,191 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: "How to Clone All Your Team's Repos with raid install",
+  description:
+    'Bootstrap a multi-repo workspace in one command. `raid install` clones every repo in your profile in parallel, runs install tasks, and is fully idempotent.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'raid install', 'clone repos', 'multi-repo bootstrap',
+    'developer onboarding', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-clone-all-your-team-repos-with-raid-install' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+The first thing a new hire usually does on day one is clone the repos. With five services and a couple of shared libs, that's the rest of the morning. `raid install` collapses that into a single command — it reads the active profile, clones every repo in parallel, and runs each repo's `install:` tasks.
+
+This guide covers the basic flow, the flags that matter, and how `raid install` behaves on subsequent runs.
+
+## 1. The basic flow
+
+Assuming you've already added a profile (see [How to create a Raid profile](/blog/how-to-create-a-raid-profile)):
+
+```bash
+raid install
+```
+
+Raid does, in order:
+
+1. Reads the active profile and the list of repositories in it.
+2. **Clones every repo in parallel** to the `path:` defined for each.
+3. Runs the profile-level `install: tasks:` sequence.
+4. Reports a summary.
+
+The order is intentional — repos exist before any install task touches them, so an `npm ci` in a freshly cloned `frontend` repo will find its `package.json`.
+
+## 2. Capping parallelism
+
+`raid install` clones every repo concurrently by default. On a constrained network or a self-hosted runner with bandwidth limits, cap the parallelism with `--threads N` (or `-t N`):
+
+```bash
+raid install --threads 4
+```
+
+Four concurrent clones at a time. Worth a lower number on flaky connections; the default is fine on most local machines.
+
+## 3. Installing a single repo
+
+Sometimes you only want to bootstrap one repo — you added a new service to the profile and don't want to re-walk the others:
+
+```bash
+raid install <repo-name>
+```
+
+Clones just that repo (or skips the clone if it's already there) and runs that repo's `install:` tasks. **Profile-level install tasks are skipped** in single-repo mode — those are for whole-environment bootstrap, not per-service top-ups.
+
+## 4. Idempotency
+
+`raid install` is safe to re-run. A repo that's already at its `path:` is skipped, not re-cloned. Install tasks always run — they're expected to be idempotent themselves (`npm ci` is fine; a destructive bootstrap script that wipes state is not).
+
+A few cases worth knowing:
+
+- **Repo path exists, repo not cloned (e.g. empty directory):** Raid will use it as the clone target. Make sure it's actually empty if you don't want git to refuse.
+- **Repo with no `url:` (local-only):** if the path exists, Raid uses it as-is. If the path doesn't exist, Raid errors out — there's no remote to clone from.
+- **Already-cloned repo at a different remote:** Raid does not change the remote. It assumes you intentionally renamed something and leaves the working copy alone.
+
+## 5. Per-repo install tasks
+
+Each repo's `raid.yaml` can declare its own `install:` block — the per-repo bootstrap:
+
+```yaml
+# frontend/raid.yaml
+install:
+  tasks:
+    - type: Shell
+      cmd: npm ci
+    - type: Shell
+      cmd: npm run codegen
+```
+
+`raid install` runs the profile-level tasks first, then each repo's tasks in the order their repos are listed in the profile.
+
+This is the natural place for `npm ci` / `pip install` / `cargo fetch` / `make tools` — anything the repo needs to be runnable after a fresh clone.
+
+## 6. The `install` block at profile level
+
+A profile can also declare its own `install:` tasks — for cross-repo bootstrap (priming a shared database, generating a TLS cert, starting a docker-compose stack):
+
+```yaml
+# acme.raid.yaml
+install:
+  tasks:
+    - type: Shell
+      cmd: docker compose -f ./infra/local.yml up -d
+    - type: Wait
+      url: http://localhost:5432
+      timeout: 30s
+    - type: Shell
+      cmd: ./scripts/seed-db.sh
+```
+
+Profile-level tasks run **after** all repos are cloned and before per-repo install tasks. Useful for infra that every repo's install depends on.
+
+## 7. Failure handling
+
+If a clone fails, Raid reports the failure for that repo and continues with the others (a single repo's network blip shouldn't block the rest of the install). Once all clones are done, install tasks run only for the repos that successfully cloned.
+
+The exit code is **4 (Network)** when any clone failed, **3 (Task)** when an install task failed, **0** on full success. See [How to wire Raid into CI](/blog/how-to-wire-raid-into-ci) for using the categories.
+
+## 8. The day-one onboarding flow
+
+Putting it together, day one looks like:
+
+```bash
+# Install raid
+brew install 8bitalex/tap/raid
+
+# Register the team profile
+raid profile add git@github.com:acme/raid-profiles.git
+
+# Clone and bootstrap everything
+raid install
+
+# Pick the env
+raid env local
+
+# Start the dev server
+raid dev
+```
+
+Five commands and the new hire is running the stack — no wiki archaeology, no Slack threads.
+
+## Next steps
+
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — the file `raid install` reads from.
+- [How to Add a `raid.yaml` to an Existing Repo](/blog/how-to-add-a-raid-yaml-to-an-existing-repo) — where per-repo install tasks live.
+- [How to Add a Health Check to a Raid Workflow](/blog/how-to-add-a-health-check-to-a-raid-workflow) — pairing `Wait` with install for "start service, wait for it, run seed".

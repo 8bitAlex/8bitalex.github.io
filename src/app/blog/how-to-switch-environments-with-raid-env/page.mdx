@@ -1,0 +1,215 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Switch Environments with raid env',
+  description:
+    'Use `raid env <name>` to switch every repo in your profile to local, staging, or production at once — variable scoping, repo overrides, and the merge rules.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'raid env', 'environment variables', 'multi-repo',
+    '.env file', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-switch-environments-with-raid-env' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+A team that ships against `local`, `staging`, and `production` ends up doing the same dance every time someone needs to switch: edit five `.env` files, run different startup commands per repo, hope nothing's stale. `raid env <name>` collapses that into one command.
+
+This guide covers how `raid env` works, where variables come from, and the merge rules between profile-level and repo-level definitions.
+
+## 1. The shape of an environment
+
+Environments are declared at the profile level. Each has a name, optional variables, and optional tasks:
+
+```yaml
+# web-platform.raid.yaml
+name: web-platform
+repositories:
+  - { name: frontend, path: ~/Developer/frontend, url: https://github.com/acme/frontend.git }
+  - { name: backend,  path: ~/Developer/backend,  url: https://github.com/acme/backend.git }
+
+environments:
+  - name: local
+    variables:
+      - { name: API_URL,  value: http://localhost:8080 }
+      - { name: NODE_ENV, value: development }
+  - name: staging
+    variables:
+      - { name: API_URL,  value: https://api.staging.acme.com }
+      - { name: NODE_ENV, value: production }
+    tasks:
+      - type: Shell
+        cmd: echo "Pointing at staging."
+```
+
+## 2. Switching environments
+
+```bash
+raid env staging
+```
+
+What happens, in order:
+
+1. Raid records `staging` as the active environment in `~/.raid/`.
+2. For every repository in the profile, Raid writes a `.env` file at the repo root containing the merged variables.
+3. Raid executes the environment's `tasks:` sequence.
+
+Every repo now has the same `.env` content, and every subsequent `raid <command>` runs against staging.
+
+## 3. Showing and listing
+
+```bash
+raid env            # show the currently active environment
+raid env list       # list every available environment
+```
+
+Both support `--json` for scriptable output — see [How to wire Raid into CI](/blog/how-to-wire-raid-into-ci).
+
+## 4. Per-repo overrides
+
+The profile defines the *shape* of the environment (which envs exist, what's globally true). Each repo can layer overrides on top in its own `raid.yaml`:
+
+```yaml
+# inside frontend's raid.yaml
+environments:
+  - name: local
+    variables:
+      - { name: PORT, value: '3000' }
+```
+
+When `raid env local` runs, the frontend repo's `.env` file gets the profile's variables plus `PORT=3000`.
+
+If both define the same key, the **repo's value wins for that key** — handy for ports, paths, or other repo-shaped values.
+
+## 5. The merge rules in one place
+
+For a given environment name, Raid loads the profile entry first and then the repo entry. The merge is conservative and predictable:
+
+| Field        | Profile + Repo behavior                                             |
+| ------------ | ------------------------------------------------------------------- |
+| `variables`  | Profile vars first, then repo vars. Repo entries override matching keys per-key. |
+| `tasks`      | Profile tasks first, then repo tasks. Both run, in that order.      |
+| `name`       | Must match exactly. Repos can't introduce new env names — only profile can. |
+
+The practical effect: profile-level changes propagate to every repo; per-repo overrides are localized. You can read any single repo's `raid.yaml` and know which values it adds on top.
+
+## 6. Common patterns
+
+### Switching the API endpoint everyone hits
+
+The classic case — one variable that needs to change across the whole stack:
+
+```yaml
+environments:
+  - name: local
+    variables: [{ name: API_URL, value: http://localhost:8080 }]
+  - name: staging
+    variables: [{ name: API_URL, value: https://api.staging.acme.com }]
+  - name: production
+    variables: [{ name: API_URL, value: https://api.acme.com }]
+```
+
+`raid env staging` and every repo's `.env` file points at staging.
+
+### Per-repo ports
+
+Each microservice listens on a different local port. Define them in each repo's `raid.yaml`:
+
+```yaml
+# auth-service/raid.yaml
+environments:
+  - name: local
+    variables: [{ name: PORT, value: '8081' }]
+```
+
+The profile's `local` env gives every repo `API_URL`; each repo's `local` env adds `PORT` on top.
+
+### Running setup tasks on switch
+
+Sometimes switching environments isn't just variables — you also need to restart a Docker network, prime a cache, or print a banner:
+
+```yaml
+environments:
+  - name: production
+    variables: [{ name: API_URL, value: https://api.acme.com }]
+    tasks:
+      - type: Print
+        message: ⚠️  You are pointed at PRODUCTION.
+        color: yellow
+      - type: Confirm
+        message: Continue?
+```
+
+Tasks run after the `.env` files are written. Combine with [Confirm tasks](/blog/how-to-use-templates-and-prompts-in-raid-tasks) for safety rails.
+
+## 7. Reading the active env from your app
+
+Each repo's `.env` file is plain `KEY=VALUE`. Use whatever your stack already uses — `dotenv` in Node, `direnv` shell loading, Go's `os.Getenv` after `godotenv.Load()`. Raid manages the file's contents; your app reads it normally.
+
+## 8. Resetting / clearing
+
+There's no explicit "no environment" mode — you switch by running a different `raid env <name>`. To re-emit the current env's `.env` files (e.g. after editing the profile), just re-run the same command:
+
+```bash
+raid env local   # rewrites every .env to match the profile + repo definition
+```
+
+## Next steps
+
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — where environments are first defined.
+- [How to Use Templates and Prompts in Raid Tasks](/blog/how-to-use-templates-and-prompts-in-raid-tasks) — for env switches that need richer flows.
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — pinning the env in non-interactive contexts.

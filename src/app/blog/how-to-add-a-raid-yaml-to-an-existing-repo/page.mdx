@@ -1,0 +1,235 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Add a raid.yaml to an Existing Repo',
+  description:
+    'Commit a raid.yaml to any repo so the Raid CLI can run its commands, environments, and install steps — and merge them with the team profile automatically.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'raid.yaml', 'repo config', 'multi-repo development',
+    'developer tooling', 'YAML', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-add-a-raid-yaml-to-an-existing-repo' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+A `raid.yaml` is the per-repo counterpart to a Raid profile. The profile lives at the team level and describes *which repos exist* and *what environments are available*. The `raid.yaml` lives inside each repo and describes *what's specific to this repo* — its commands, its install steps, its environment overrides.
+
+This guide walks through adding one to a repo from scratch.
+
+## 1. Where it goes
+
+Put `raid.yaml` at the **root of the repo**, alongside `README.md` / `package.json` / `go.mod`. The filename must be exactly `raid.yaml` (lowercase, no profile prefix) — that's how Raid recognizes it as a repo config rather than a standalone profile.
+
+```
+your-repo/
+├── raid.yaml          ← here
+├── package.json
+└── src/
+```
+
+## 2. The minimum
+
+The smallest useful `raid.yaml` defines a single command:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-repo.schema.json
+name: frontend
+commands:
+  - name: dev
+    usage: Run the dev server with hot reload
+    tasks:
+      - type: Shell
+        cmd: npm run dev
+```
+
+Commit it. Anyone running `raid dev` from anywhere on disk will now run `npm run dev` inside this repo.
+
+The schema header gives you completion and validation in any editor with `yaml-language-server` (VS Code, JetBrains, Neovim).
+
+## 3. The full surface
+
+A `raid.yaml` accepts six top-level fields. You only use the ones you need:
+
+```yaml
+# yaml-language-server: $schema=https://raidcli.dev/schema/v1/raid-repo.schema.json
+name: frontend           # display name (defaults to directory name)
+branch: main             # default branch for git ops
+
+verify:                  # preconditions checked before commands run
+  - cmd: node --version
+
+install:                 # what `raid install` runs for this repo
+  tasks:
+    - type: Shell
+      cmd: npm ci
+
+environments:            # per-repo overrides on top of profile envs
+  - name: local
+    variables:
+      - { name: API_URL, value: http://localhost:8080 }
+
+commands:                # user-facing `raid <name>` subcommands
+  - name: dev
+    usage: Run the dev server
+    tasks:
+      - type: Shell
+        cmd: npm run dev
+  - name: test
+    usage: Run the unit tests
+    tasks:
+      - type: Shell
+        cmd: npm test
+```
+
+## 4. How it merges with the profile
+
+When the team profile loads, Raid reads every repo's `raid.yaml` and **merges** them. The rules are predictable:
+
+- **`commands`** — appended. If the profile and the repo both define `dev`, the **profile** wins (so platform-level commands are stable).
+- **`install` tasks** — appended; the repo's run after the profile's.
+- **`environments`** — merged by name. If both define an `local` env, **variables are concatenated**, repo entries can override matching keys on a per-key basis, and the profile's tasks run before the repo's.
+- **`verify`** — appended.
+
+The practical effect: the team profile sets the *shape* of the environment (which envs exist, what commands are guaranteed to be there). Each `raid.yaml` adds repo-specific commands and environment values without fighting the profile.
+
+## 5. Common patterns
+
+### Wrap your existing scripts
+
+If you already have `npm run` / `make` / `just` recipes, just shell them out:
+
+```yaml
+commands:
+  - name: build
+    tasks:
+      - type: Shell
+        cmd: make build
+  - name: lint
+    tasks:
+      - type: Shell
+        cmd: npm run lint
+```
+
+That gives you `raid build` / `raid lint` everywhere, without rewriting your existing tooling.
+
+### A repo-specific install step
+
+If the repo needs `npm ci` and a one-time codegen pass on first clone:
+
+```yaml
+install:
+  tasks:
+    - type: Shell
+      cmd: npm ci
+    - type: Shell
+      cmd: npm run codegen
+```
+
+`raid install` will run those after the repo is cloned.
+
+### Pin a local env value
+
+Most env vars belong in the **profile** so every developer agrees on them. But sometimes a repo has a value only meaningful inside it (e.g. its own port):
+
+```yaml
+environments:
+  - name: local
+    variables:
+      - { name: PORT, value: '3000' }
+```
+
+The profile-level `local` env still sets shared values; this repo's `local` adds `PORT` on top.
+
+### Add a precondition
+
+`verify` runs before any command. Use it to catch missing tools fast:
+
+```yaml
+verify:
+  - cmd: node --version
+  - cmd: docker --version
+```
+
+If either fails, Raid stops with a clear error instead of letting the actual command crash partway through.
+
+## 6. Test it locally
+
+You don't need a profile to try a `raid.yaml`. Add it directly:
+
+```bash
+raid profile add ./raid.yaml
+```
+
+When the filename is literally `raid.yaml`, Raid synthesizes a single-repo profile from it. You can run the commands immediately to verify they work, then remove the profile (`raid profile remove <name>`) and let the team profile pick it up later.
+
+## 7. Commit it
+
+`raid.yaml` is part of the repo. Commit it like any other config file:
+
+```bash
+git add raid.yaml
+git commit -m "chore: add raid.yaml — commands, install, local env"
+```
+
+From this point on, every developer on the team gets the same `raid dev`, `raid test`, `raid build`, regardless of which repo they're standing in.
+
+## Next steps
+
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — the team-level wrapper that ties multiple `raid.yaml` files together.
+- [How to Define a Custom Command in Raid](/blog/how-to-define-a-custom-command-in-raid) — the eleven task types and how to compose them.
+- [How to Switch Environments with `raid env`](/blog/how-to-switch-environments-with-raid-env) — what merging actually does at runtime.

@@ -1,0 +1,175 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Use Raid as an MCP Server for AI Agents',
+  description:
+    'Run `raid context serve` to expose your multi-repo workspace to AI agents over MCP — six tools, six resources, JSON-RPC over stdio, no network exposure.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'MCP', 'Model Context Protocol', 'AI agent',
+    'Claude Code', 'developer tooling', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-use-raid-as-an-mcp-server' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+AI coding agents work best when they can see the *shape* of the workspace — which repos exist, what environment is active, which commands are available. Raid already knows all of that. `raid context serve` exposes it over the [Model Context Protocol](https://modelcontextprotocol.io/) so any MCP-compatible agent can read state and invoke commands directly.
+
+This guide covers what the server exposes, how to wire it into a client, and the security model.
+
+## 1. The two commands
+
+Raid ships two related entry points:
+
+- **`raid context`** — prints a one-shot snapshot of the workspace (profile, env, repos, commands, recent runs). Supports `--json`. Good for piping into any LLM context window.
+- **`raid context serve`** — runs an MCP server over stdio. The agent (Claude Code, Cursor, etc.) spawns it, speaks JSON-RPC 2.0, and can both *read* workspace state and *call* Raid actions.
+
+Same data, two access patterns: copy-paste vs. agent-driven.
+
+## 2. What the MCP server exposes
+
+The server exposes **six resources** (read-only state) and **six tools** (actions).
+
+### Resources
+
+Each resource has a `raid://` URI an MCP client can fetch:
+
+| URI                          | Content                                         |
+| ---------------------------- | ----------------------------------------------- |
+| `raid://workspace/profile`   | Active profile name (text)                      |
+| `raid://workspace/env`       | Active environment name (text)                  |
+| `raid://workspace/repos`     | Repos in the active profile + git state (JSON)  |
+| `raid://workspace/commands`  | User-defined commands available (JSON)          |
+| `raid://workspace/recent`    | Recently-run commands (JSON)                    |
+| `raid://workspace/vars`      | Persisted Raid variables (JSON, live-watched)    |
+
+### Tools
+
+Tools the agent can invoke:
+
+| Tool name              | What it does                                              |
+| ---------------------- | --------------------------------------------------------- |
+| `raid_list_profiles`   | List every registered profile                              |
+| `raid_list_repos`      | List repos in the active profile, with URLs and git state |
+| `raid_describe_repo`   | Return the parsed `raid.yaml` for a named repo            |
+| `raid_install`         | Run `raid install` (whole profile or a single repo)        |
+| `raid_env_switch`      | Switch to a named environment                              |
+| `raid_run_task`        | Execute a user-defined `raid <command>` with args         |
+
+These are the same actions you'd run from the shell — the agent just calls them as MCP tool invocations instead.
+
+## 3. Wiring it into an MCP client
+
+The server speaks JSON-RPC over stdio. A typical client configuration is just two fields:
+
+```json
+{
+  "mcpServers": {
+    "raid": {
+      "command": "raid",
+      "args": ["context", "serve"]
+    }
+  }
+}
+```
+
+For Claude Code:
+
+```bash
+claude mcp add raid -- raid context serve
+```
+
+For Cursor / Windsurf / other MCP clients, point them at the same `raid context serve` command. The exact config file location varies; the spawn line is the same.
+
+## 4. Why this is useful
+
+Concrete things an agent can do once it's wired in:
+
+- **Read repo state before suggesting an edit.** "Which branch is `frontend` on? Is it dirty?"
+- **Switch environments before a debug session.** "Set env to staging, then run the API smoke tests."
+- **Discover commands.** "Show me the commands available in this profile" — the agent reads `raid://workspace/commands` and tells you `raid test`, `raid deploy`, etc., without you copy-pasting.
+- **Invoke them with arguments.** `raid_run_task` accepts command name + args, so the agent can run `raid deploy staging` directly.
+- **Stay grounded across sessions.** When you start a new chat, the agent can re-read `raid://workspace/profile` and immediately know which project you're in.
+
+The agent gets a stable, schema'd view of the workspace instead of guessing from filenames.
+
+## 5. Security model
+
+The server is a **local process over stdio**. Practical implications:
+
+- **No network exposure.** It does not bind a port. The only way to reach it is to be the client that spawned it.
+- **No authentication.** Authentication is provided by who can spawn the process — i.e. your user account on your machine.
+- **Tool calls run with your privileges.** `raid_run_task` is the most powerful tool: anything you'd run with `raid <command>` from your shell can be triggered through it. Treat the agent that holds the connection the way you'd treat a paired-programming partner who can hit Enter on your terminal.
+- **State changes are persisted.** `raid_env_switch` and `raid_install` change the same `~/.raid/` state your CLI uses. The next time you open a shell, the env switch is still in effect.
+
+If you don't want the agent to be able to mutate state, don't wire `raid context serve` in — use one-shot `raid context --json` snapshots instead, which are strictly read-only.
+
+## 6. Snapshots without the server
+
+For agents that don't speak MCP (or sessions where you just want a context primer), pipe the snapshot in directly:
+
+```bash
+raid context --json | pbcopy   # macOS
+raid context --json             # paste into chat
+```
+
+The JSON has the same shape as the MCP resources combined — profile, env, repos, commands, recent. Drop it into your agent's system prompt or your first message.
+
+## Next steps
+
+- [How to Wire Raid into CI](/blog/how-to-wire-raid-into-ci) — non-interactive flags that complement headless MCP use.
+- [Raid technical deep dive](/blog/raid-technical-deep-dive) — the design decisions behind the context model.

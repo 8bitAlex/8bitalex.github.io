@@ -1,0 +1,287 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Tutorial',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Define a Custom Command in Raid',
+  description:
+    'Define a custom `raid <name>` command by composing the eleven built-in task types — Shell, Script, Git, HTTP, Wait, Template, Prompt, Confirm, Print, Set, and Group.',
+  tags: ['Raid', 'Tutorial']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'Raid', 'Raid CLI', 'custom command', 'task runner', 'YAML',
+    'developer tooling', 'shell task', 'tutorial'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'TechArticle',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Tutorial',
+          about: { '@type': 'SoftwareApplication', name: 'Raid', applicationCategory: 'DeveloperApplication', url: 'https://raidcli.dev' }
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-define-a-custom-command-in-raid' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+A Raid command is a named sequence of tasks. Once defined, it's available as a first-class `raid <name>` subcommand — auto-listed in `raid --help`, invocable from anywhere on disk, and runnable in CI without changes.
+
+This guide walks through writing one from scratch and tours the eleven built-in task types.
+
+## 1. The minimum command
+
+A command has a name, an optional `usage:` line for `--help`, and a `tasks:` array. The smallest useful one is one task long:
+
+```yaml
+commands:
+  - name: dev
+    usage: Run the dev server with hot reload
+    tasks:
+      - type: Shell
+        cmd: npm run dev
+```
+
+Run it from anywhere:
+
+```bash
+raid dev
+```
+
+Raid resolves the command, switches to the repo's directory, and runs the task.
+
+## 2. Where to define them
+
+Commands can live at two levels:
+
+- **Profile-level** (in `*.raid.yaml`) — show up as platform-wide commands. Ideal for things every developer should be able to run.
+- **Repo-level** (in `raid.yaml` inside a repo) — show up the same way; specific to that repo.
+
+When both define the same name, the profile wins. That keeps platform-level commands stable even when individual repos drift.
+
+## 3. Tour: the eleven task types
+
+Every task has a `type:`, and Raid ships with eleven of them. All accept an optional `name:` (shown in output), `concurrent: true` (run alongside the next task), and a `condition:` block (skip unless platform/file/command matches).
+
+### Shell
+
+Run a shell command. The workhorse:
+
+```yaml
+- type: Shell
+  cmd: npm test
+  shell: bash       # optional: bash | sh | zsh | powershell | pwsh | cmd
+  path: ./packages/api   # optional: working directory
+```
+
+### Script
+
+Run a script file. Pick the runner explicitly:
+
+```yaml
+- type: Script
+  path: ./scripts/deploy.sh
+  runner: bash      # bash | sh | zsh | python | python3 | node | powershell
+```
+
+### Set
+
+Set a variable for later tasks (with `$VAR` / `${VAR}` expansion):
+
+```yaml
+- type: Set
+  var: VERSION
+  value: $(git rev-parse --short HEAD)
+  default: dev       # used if value expansion yields empty
+```
+
+### Git
+
+A typed wrapper over common git operations — easier to read in YAML than a Shell task:
+
+```yaml
+- type: Git
+  op: pull           # pull | checkout | fetch | reset
+  branch: main
+  path: ./
+```
+
+### HTTP
+
+Download a file:
+
+```yaml
+- type: HTTP
+  url: https://example.com/seed.sql
+  dest: ./data/seed.sql
+```
+
+### Wait
+
+Wait for a TCP port or an HTTP endpoint to become healthy:
+
+```yaml
+- type: Wait
+  url: http://localhost:8080/health
+  timeout: 60s
+```
+
+Works with bare `host:port` too — useful for waiting on a database to accept connections.
+
+### Template
+
+Render a template file with variable expansion and write the output:
+
+```yaml
+- type: Template
+  src: ./templates/config.tmpl
+  dest: ./config/local.yaml
+```
+
+### Prompt
+
+Ask the user for a value, store it in a variable:
+
+```yaml
+- type: Prompt
+  var: ENVIRONMENT
+  message: Which environment?
+  default: local
+```
+
+In headless mode (`--yes`, `--headless`, `RAID_HEADLESS=1`, or `--json`), the `default:` is used. Without one, the task fails with a clear error — see [How to wire Raid into CI](/blog/how-to-wire-raid-into-ci).
+
+### Confirm
+
+Pause for a `y`/`yes`:
+
+```yaml
+- type: Confirm
+  message: Deploy to production?
+```
+
+Auto-accepts in headless mode.
+
+### Print
+
+Print to the terminal — handy for status updates and section dividers:
+
+```yaml
+- type: Print
+  message: Build complete.
+  color: green       # red | green | yellow | blue | cyan | white
+```
+
+### Group
+
+Group several tasks together — useful for retry / parallelism semantics on a logical unit:
+
+```yaml
+- type: Group
+  ref: build-and-test
+  parallel: false
+  attempts: 3
+  delay: 5s
+```
+
+`Group` references a named block defined elsewhere — see the [Raid technical deep dive](/blog/raid-technical-deep-dive) for the longer pattern.
+
+## 4. Composing a real command
+
+Most useful commands chain a few task types together. Example: a `release` command that prompts for a version, builds, waits for tests to settle, and prints a summary.
+
+```yaml
+commands:
+  - name: release
+    usage: Cut a new release of the API
+    tasks:
+      - type: Prompt
+        var: VERSION
+        message: Version to release (e.g. 1.4.0)?
+      - type: Shell
+        cmd: npm run build
+      - type: Shell
+        cmd: npm test
+      - type: Wait
+        url: http://localhost:8080/health
+        timeout: 30s
+      - type: Print
+        message: Release ${VERSION} built and tested.
+        color: green
+```
+
+`raid release` walks the tasks top-to-bottom, halting on the first failure (unless a task opts into `options.continueOnFailure: true`).
+
+## 5. Useful options on every task
+
+Each task supports a few optional knobs that aren't a `type:` value:
+
+- `name:` — friendly label for output (defaults to the type)
+- `options.showExeTime: true` — print elapsed time after the task
+- `options.continueOnFailure: true` — log the failure but don't halt the command
+- `concurrent: true` — run alongside the next task instead of sequentially (see [How to run tasks in parallel](/blog/how-to-run-tasks-in-parallel-with-raid))
+- `condition:` — skip the task unless a platform / file / command matches:
+  ```yaml
+  - type: Shell
+    cmd: brew install jq
+    condition:
+      platform: darwin
+  ```
+
+## 6. Verify it landed
+
+After saving, your command shows up automatically:
+
+```bash
+raid --help
+```
+
+The new entry appears alongside the built-ins under user-defined commands.
+
+## Next steps
+
+- [How to Run Tasks in Parallel with Raid](/blog/how-to-run-tasks-in-parallel-with-raid) — when and why to use `concurrent`.
+- [How to Use Templates and Prompts in Raid Tasks](/blog/how-to-use-templates-and-prompts-in-raid-tasks) — interactive flows in detail.
+- [How to Debug a Failing Raid Task](/blog/how-to-debug-a-failing-raid-task) — exit codes, verbose mode, common pitfalls.
