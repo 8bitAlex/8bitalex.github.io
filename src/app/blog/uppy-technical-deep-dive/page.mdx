@@ -27,8 +27,9 @@ The "silly" part wasn't accidental either. The whole point of a learning project
 
 ## Design Goals
 
-Three principles drove the calls that mattered:
+Four principles drove the calls that mattered:
 
+- **Fun first.** This is the load-bearing one. If a design choice would make Uppy more correct or more clever but less fun, the design choice loses. Every other principle below is downstream of this one.
 - **Cooperative, not competitive.** Every player should feel like part of the team. As the lobby grows, individual players should feel *more* dependent on strangers, not less. The cooldown formula (more on this below) is the mechanism, but the goal came first.
 - **Zero friction to start playing.** Open the page, pick a nickname, you're in. Magic-link login exists but is strictly optional — only needed if you want to claim a persistent name and a score on the leaderboard.
 - **One thumb, mobile-first.** The whole game can be played with one thumb. Landscape orientation is enforced because the playfield is wider than it is tall.
@@ -370,21 +371,33 @@ The deliberate non-choice: **no framework on the client, no shared state library
 
 ## What I Learned
 
+- **Walking in and balancing everything was the hardest part.** A player joining a lobby mid-round is the single most complicated thing the server does. The new player needs a palette, a starting cooldown that doesn't unbalance the in-progress game, a position in the player list, an introduction packet that brings them up to speed on the current physics state, and a fair share of the per-player contribution without disrupting players who've been there since the round started. None of this is hard in isolation; all of it has to happen in the right order and stay correct if the player drops their connection a tick later. Reconnect handling alone took longer than the entire physics layer.
+- **Scaling the lobbies was easier than expected.** This is the upside surprise of building on Durable Objects. Adding more lobbies is just adding more DOs; there's no shared state to contend over, no resource pool to size, no horizontal-scale design to do. Each lobby is its own one-room universe. The model just works at any number of concurrent games, which is the kind of thing you'd spend weeks engineering on traditional infrastructure.
 - **Durable Objects are perfect for multiplayer state.** Real-time sync across clients without needing Redis or Pub/Sub. The DO is the source of truth and the fan-out is built in. This is the single most useful primitive Cloudflare has added since Workers themselves.
-- **The state management is the hard part.** Not the WebSockets, not the rendering, not the deployment — the cooldown logic, the score reconciliation, the rejoin-after-disconnect edge cases. Reconnect handling alone took longer than the entire physics layer. The kind of work that doesn't show up in a tutorial but eats your weekend.
 - **Playtesting with strangers is a different beast.** Real human latency, real weird inputs, real "I clicked, nothing happened for two seconds, then five things happened at once" reports. Logs you can't reproduce in dev. The PostHog survey turned out to be the single most useful diagnostic tool for the early period because it gave me unprompted feedback exactly when something memorable had just happened.
 - **The free tier goes further than you'd expect.** A single Worker, a handful of Durable Objects per active lobby, a D1 database, the Email Service. None of it costs anything at the volume Uppy runs at, and the headroom before it would is enormous.
 - **Simple gameplay is harder than it looks.** The cooldown formula took a half-dozen passes before it felt right. Every constant mattered. Every floor and ceiling mattered. The graphs above hide the iteration that produced them.
 
 ## The Road Ahead
 
-Three things on the short list:
+Four things on the short list:
 
 1. **Power-ups + modifiers.** Slow time, double-strength taps, balloon shields. Gravity bursts, wind. Each one is a new physics interaction layered on top of the existing loop; none of them change the core mechanic.
 2. **A porcupine** as a second hazard with a different movement pattern. The bird darts; the porcupine drifts.
 3. **An artist.** The current visuals are programmer art. The game would be meaningfully more delightful with real character design. If that's you, get in touch.
+4. **Native mobile apps for iOS and Android.** The web build already feels good on phones, but a native wrapper is the right next step for the audience this is built for (more on that below).
 
 Beyond those, nothing concrete. I'm letting playtesting drive priorities rather than guessing.
+
+## Who It's For
+
+Anyone, honestly. The shapes of group I had in mind while building it:
+
+- **Streamers and their chats.** A lobby code is five characters; chat can pile in fast.
+- **Subreddit and Discord communities.** A short-session co-op game is a low-effort way to do something together that isn't watching a video or arguing.
+- **Teams who need a five-minute palate cleanser.** Stand-up's running over, retro's getting heated, someone needs a break — Uppy is one tab and ten seconds away.
+
+If you fit any of those, give it a try and bring people. Lobbies feel different at 2 players, at 8 players, and at 20.
 
 ## Closing
 
