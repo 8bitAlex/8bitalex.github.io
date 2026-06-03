@@ -1,0 +1,211 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Give Your AI Coding Agent Context Across Multiple Repos',
+  description:
+    "AI coding agents work much better when they can see your whole workspace. Here's how to give Claude Code, Cursor, or any MCP-compatible agent context across every repo at once.",
+  tags: ['Developer Experience', 'AI', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'AI coding agent', 'Claude Code context', 'Cursor MCP',
+    'Model Context Protocol', 'MCP server', 'AI agent multi-repo',
+    'developer tooling', 'AI workflow'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-give-your-ai-coding-agent-context-across-repos' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+AI coding agents are dramatically better when they can see the *shape* of your workspace. Which repos exist. What environment you're in. What commands the team uses. What just got run, and what failed. Most agents today work brilliantly inside one repo and get hazy as soon as you ask them anything that crosses a directory boundary.
+
+This is fixable — and it's fixable in a way that also makes the *humans* on your team more productive. The mechanism is the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP), and the trick is exposing your workspace through a small server that any MCP-aware agent can query.
+
+## 1. Why one-repo context isn't enough
+
+A typical AI coding agent today sees:
+
+- The file tree of the open project.
+- Some recent git history.
+- Whatever's in the current message.
+
+That's enough for a lot of work. It runs out when you ask:
+
+- "Which other services in the stack call this API?"
+- "Switch to staging and re-run the test."
+- "Did the deploy I asked you to run actually finish?"
+- "What's the test command for the worker service?"
+
+In all four cases, the answer lives *outside* the currently open repo. The agent doesn't know about the other repos, doesn't know about your environments, doesn't know which commands the team uses across services. It guesses, asks you, or fakes it.
+
+## 2. What MCP solves
+
+MCP is a small open protocol that lets an AI agent (Claude Code, Cursor, Windsurf, etc.) talk to a server that exposes:
+
+- **Resources** — read-only state the agent can fetch (a JSON document, a text blob).
+- **Tools** — actions the agent can invoke (run a command, fetch some data).
+
+The agent doesn't care where the server lives; it spawns a process and speaks JSON-RPC over stdio. The server can expose anything: a database, an API, a knowledge base, your workspace state.
+
+For multi-repo development, the natural resources to expose are:
+
+- The list of repos your team works on, with their git state.
+- The active environment.
+- The user-facing commands available.
+- Recently-run commands and their outcomes.
+
+And the natural tools:
+
+- Switch environments.
+- Run a command.
+- Bootstrap a repo.
+
+Once those are exposed, the agent stops guessing.
+
+## 3. The shape of a workspace MCP server
+
+A workspace MCP server doesn't need to be exotic. It needs to expose, at minimum:
+
+1. **A list of repos** — name, URL, local path, current branch, whether the working copy is dirty.
+2. **The active environment** — local / staging / production / whatever the team uses.
+3. **The available commands** — what's in `team --help`, what each does.
+4. **A way to switch environments and run commands** — the agent can act, not just observe.
+
+Pair that with **stdio-only transport** (no network exposure) and **no extra auth** (the agent is local, runs as you, can do anything you can) and you have a workable design.
+
+## 4. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this — a CLI for multi-repo orchestration with an MCP server baked in. The wiring is short:
+
+```bash
+# Add raid's MCP server to Claude Code
+claude mcp add raid -- raid context serve
+```
+
+Or in any MCP-compatible client's config:
+
+```json
+{
+  "mcpServers": {
+    "raid": {
+      "command": "raid",
+      "args": ["context", "serve"]
+    }
+  }
+}
+```
+
+Once that's in place, the agent can:
+
+- Read `raid://workspace/repos` to see every repo in the profile and its git state.
+- Read `raid://workspace/env` to know which environment is active.
+- Read `raid://workspace/commands` to see what user-defined commands exist.
+- Call `raid_env_switch` to swap environments.
+- Call `raid_run_task` to execute a team command with args.
+
+Six tools, six resources. Plenty to make the agent useful across the whole stack instead of one repo.
+
+The full how-to is in [How to use Raid as an MCP server for AI agents](/blog/how-to-use-raid-as-an-mcp-server) — including the security model.
+
+## 5. Patterns that get good results
+
+A few patterns I've found work well once the agent has workspace-level context:
+
+### "What's the shape of this codebase?"
+
+A new chat starts with the agent reading `raid://workspace/repos` and `raid://workspace/commands`. It now knows the services exist, where each lives, and what operations the team supports. Cuts down "here's the layout" preambles to zero.
+
+### "Switch to staging, run the smoke tests"
+
+The agent invokes `raid_env_switch` with `staging`, then `raid_run_task` with the smoke-test command. It can report back what passed and what failed. No copy-pasting `raid env staging && raid smoke` into the terminal yourself.
+
+### "Investigate this incident"
+
+The agent reads `raid://workspace/recent` to see what's been run lately. It correlates that with the failing service's git state. Often the cause shows up — a deploy fifteen minutes ago, a config switch this morning.
+
+### "Is this safe to run?"
+
+The agent reads the YAML for the command before running it. If it's just `npm test`, fine. If it's `kubectl delete -A`, the agent flags it instead of executing blindly. That's a property of having declarative commands the agent can *read*, not just *call*.
+
+## 6. The security model — keep it boring
+
+A few things to be deliberate about when wiring an agent to a workspace server:
+
+- **The server runs as you.** It can do anything you can do. Treat the agent connected to it the way you'd treat a paired-programming partner who can hit Enter on your terminal.
+- **State changes persist.** `raid_env_switch` changes the same `~/.raid/` state your CLI uses. The next shell you open is in the env the agent left you in.
+- **Tools can be destructive.** `raid_run_task` runs anything you've declared as a command. If you have a `raid drop-db` command in your profile (and you might, for local development), the agent can call it. Be intentional about which commands you expose, the same way you'd be intentional about a runbook.
+- **Don't expose secrets through resources.** A workspace server should expose *workspace state*, not credentials. Keep secrets in your existing secrets manager.
+
+If you want the agent to be strictly read-only, don't run the server — use `raid context --json` to dump a snapshot into the chat instead. Same data, no action surface.
+
+## 7. The collateral benefit
+
+The interesting thing is that **whatever you build to give your AI agent context turns out to be the same thing that improves your humans' experience.** A YAML profile that an MCP server reads is also a profile that:
+
+- Tells a new hire which repos exist.
+- Lets the team switch environments with one command.
+- Documents which commands the team supports.
+
+You're not building "AI infrastructure" separately. You're building developer-experience infrastructure and getting the AI integration as a side effect. That's the path of least regret on the question of how much to invest in AI-specific tooling — invest in things humans need; expose them to agents through standard protocols.
+
+## 8. Where this is heading
+
+The Model Context Protocol is young but it's moving fast. The pattern of "expose your workspace as a server" is going to be common enough within a year that not having one will feel like not having a `README.md`. The choice isn't whether to expose your workspace — it's whether you build that exposure as a one-off or as a side effect of better orchestration.
+
+The latter is the durable bet.
+
+## Next steps
+
+- [How to Use Raid as an MCP Server for AI Agents](/blog/how-to-use-raid-as-an-mcp-server) — the technical how-to.
+- [How to Manage Multiple Repositories Without Losing Your Mind](/blog/how-to-manage-multiple-repositories) — the multi-repo coordination layer that makes the AI piece useful.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — the first step.

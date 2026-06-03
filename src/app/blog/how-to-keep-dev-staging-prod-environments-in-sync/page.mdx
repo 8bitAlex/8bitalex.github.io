@@ -1,0 +1,196 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Keep Dev, Staging, and Prod Environments in Sync',
+  description:
+    'Environment drift is the silent cause of "passed in staging, failed in prod" incidents. Here\'s a model for keeping them in sync without a config-management framework.',
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'environment parity', 'dev prod parity', 'environment management',
+    'environment drift', 'staging vs production', 'twelve factor app',
+    '.env files', 'developer experience'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-keep-dev-staging-prod-environments-in-sync' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+"Worked in staging, failed in production" is a pattern, not an accident. It happens because **staging and production are configured separately**, by different people, at different times, with no single artifact that says what's different and why. The values drift, and the drift surfaces as incidents.
+
+Same problem, smaller blast radius: "worked on my machine, failed in CI." Same root cause. Same fix.
+
+This post is about a low-overhead model for keeping environments in sync — without adopting a heavyweight config-management framework.
+
+## 1. What "in sync" actually means
+
+It does not mean "identical." A production environment will always differ from local: real secrets, real domains, real scale. The thing you actually want is **structural parity** — the *set of variables*, the *shape of the deployment*, the *startup sequence* are the same. Only the values change.
+
+A useful test: can you write down, in one screen, every variable your application reads from its environment? If yes, you're in good shape regardless of where the values come from. If no — if it's spread across five `.env.example` files, three Terraform modules, and the build pipeline — you have drift waiting to happen.
+
+## 2. Where drift comes from
+
+The usual suspects:
+
+- **Per-repo `.env.example` files** that fall out of date because nobody owns them.
+- **Environment-specific code paths** (`if NODE_ENV === 'production'`) that turn the environment into part of the program logic rather than an input.
+- **Secrets management that's separate from config management.** The secret rotation in prod doesn't get reflected in the `.env.example` developers copy from.
+- **CI configuration that drifts independently.** A pipeline that exports `API_URL` at run time instead of reading from the same definition the developer uses.
+- **No single switch.** Changing from local to staging requires editing N `.env` files in N repos, and nobody updates all of them.
+
+Each is fixable in isolation. None of them get fixed when "fixing it" requires going through five different review processes.
+
+## 3. The model: one definition, three values
+
+Whatever tool you pick, the model that works is:
+
+- **One file defines the variables your app reads.** This is the source of truth for what variables exist.
+- **One file per environment defines values.** Local, staging, prod each get their own value sheet. Same keys, different values.
+- **One command switches between them.** Editing five `.env` files by hand is where drift comes from; one command that writes them from the source-of-truth is where it stops.
+
+The shape is identical to twelve-factor's "store config in the environment," with one addition: a tool above the `.env` files that knows what each environment should contain.
+
+## 4. Implementation in three takes
+
+### Take 1: Shell scripts
+
+```bash
+# scripts/env.sh
+case "$1" in
+  local)   API_URL=http://localhost:8080 ;;
+  staging) API_URL=https://api.staging.acme.com ;;
+  prod)    API_URL=https://api.acme.com ;;
+esac
+echo "API_URL=$API_URL" > .env
+```
+
+Works for one repo. Fails as soon as you have several repos, because you need to apply the same env switch to all of them. Now you're maintaining N scripts that have to agree.
+
+### Take 2: Per-environment files
+
+```
+repo-a/.env.local
+repo-a/.env.staging
+repo-a/.env.production
+repo-b/.env.local
+repo-b/.env.staging
+repo-b/.env.production
+...
+```
+
+Better. The values are explicit. The downside: a value that appears in every repo (`API_URL`) needs to be updated in N×3 files when it changes. The drift surface area gets larger, not smaller.
+
+### Take 3: A profile-level definition
+
+A team-wide YAML file declares environments and variables at the *fleet* level. A small CLI reads it and writes the right `.env` to each repo when you switch:
+
+```yaml
+# acme.raid.yaml
+environments:
+  - name: local
+    variables:
+      - { name: API_URL, value: http://localhost:8080 }
+      - { name: LOG_LEVEL, value: debug }
+  - name: staging
+    variables:
+      - { name: API_URL, value: https://api.staging.acme.com }
+      - { name: LOG_LEVEL, value: info }
+  - name: production
+    variables:
+      - { name: API_URL, value: https://api.acme.com }
+      - { name: LOG_LEVEL, value: warn }
+```
+
+```bash
+team env staging
+```
+
+That writes the staging values into every repo's `.env`. There's one source of truth. The PR that adds a new variable is the one that propagates it to every environment. Drift becomes structurally impossible.
+
+For per-repo additions (like a service's own port), the repo gets its own small config that *adds* keys on top — but only in addition, never in conflict.
+
+## 5. The secret problem
+
+The above gets you structural parity. It does *not* get you secrets management — and you should not put real secrets in plain YAML, even encrypted. Pair the env switcher with whatever your team already uses for secrets:
+
+- **Cloud KMS / SOPS / age-encrypted files** for medium-sensitivity values.
+- **Vault / 1Password / Doppler** for proper secrets.
+- **Kubernetes Secrets / SSM Parameter Store** in deployed environments.
+
+The model is: the env switcher writes everything *except* secrets to the `.env` file. Secrets get injected at runtime by your secrets tool. The variable *exists* in the definition (so devs know it's there), but its value comes from a different source.
+
+## 6. CI is just another environment
+
+Most teams treat CI as a separate problem from local development. It doesn't have to be. If `team env staging` is what writes a developer's `.env` file, the same command can run in CI to produce CI's `.env`. The bootstrap-the-environment artifact is the same. Drift between local and CI is impossible by construction.
+
+If you're at the point where you're writing a separate "what CI exports" config, you've already broken parity. Pull it back into the same definition.
+
+## 7. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this model. The profile defines environments; `raid env <name>` writes per-repo `.env` files; the same command runs in CI as locally. The full how-to is in [How to switch environments with `raid env`](/blog/how-to-switch-environments-with-raid-env).
+
+You don't have to use Raid. The point is that **the source-of-truth shape — one definition, one switch command, same artifact local and CI — is what makes parity tractable**. Pick any tool that fits that shape.
+
+## 8. How you know it's working
+
+Two signals:
+
+- **The "what changed?" question after a prod incident has a precise answer.** When something works in staging and fails in prod, the answer is in the env definition — go look at the file. If you can't say what differs from a single source, you don't have parity.
+- **Adding a new variable is one PR.** Touches the env definition, gets reviewed, propagates. If adding a new variable means "update the wiki, update five `.env.example` files, update the CI config, update Terraform" — you're a long way from parity.
+
+## Next steps
+
+- [How to Switch Environments with `raid env`](/blog/how-to-switch-environments-with-raid-env) — the mechanism in detail.
+- [How to Make "It Works on My Machine" Actually Mean Something](/blog/how-to-make-it-works-on-my-machine-mean-something) — the developer-local version of the same problem.
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader problem this fits inside.

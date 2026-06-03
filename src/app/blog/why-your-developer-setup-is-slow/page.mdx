@@ -1,0 +1,172 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'Why Your Developer Setup Is Slow (and How to Fix It)',
+  description:
+    "Slow developer setup is rarely about hardware. It's almost always about coordination overhead — and it has a recognizable shape that's worth diagnosing before throwing tools at it.",
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'slow developer setup', 'developer environment setup', 'devex',
+    'developer productivity', 'engineering productivity',
+    'time to first commit', 'developer experience'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/why-your-developer-setup-is-slow' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+When a team complains that "setting up the dev environment is slow," the first instinct is usually to buy faster laptops. Sometimes that helps. Almost always it papers over the actual problem: the bottleneck isn't compute, it's coordination.
+
+This post is for the tech lead or engineering manager who keeps hearing about onboarding pain and wants a clear-eyed read on where the time actually goes — and a sense of what's worth fixing.
+
+## 1. Where the hours go
+
+Run an honest accounting on the next new hire. Walk through onboarding behind them with a stopwatch. The hours typically break down something like this:
+
+- **5–10%** — installing language toolchains and Docker. Real work, not really fixable.
+- **10–15%** — actually cloning repositories and running their install steps. Real work, mostly idle network time.
+- **20–30%** — reading the wiki. Or worse, finding *which* wiki page is current.
+- **20–30%** — running into a script that doesn't work and waiting for someone senior to debug it.
+- **10–20%** — `.env` files: which one to copy from, which values to change, which secrets to ask for.
+- **10–20%** — "huh, that's weird, let me ask in #engineering."
+
+The first two are the actual cost of getting the environment ready. The other 80% is coordination overhead — the new hire is blocked on someone else's attention or on documentation that drifted.
+
+The size of the coordination overhead is the size of the problem. Hardware is almost never the right knob.
+
+## 2. The shape of slow setup
+
+Five recognizable symptoms. If you see most of them, you have a "process" problem, not a "performance" problem:
+
+- **Senior engineers spend hours on every onboarding.** This is the most expensive form of toil — you're paying twice for the same install.
+- **The bootstrap is documented in a wiki that's older than the youngest service.** A wiki that points at a script that no longer exists is the canonical version of this.
+- **New hires hit something that "should work" but doesn't.** Usually a Docker image that drifted, a port that changed, a service that got renamed.
+- **The team has a private Slack channel just for "have you set up X yet?" questions.** Or worse, the public channel is full of them and senior people quietly turn off notifications.
+- **The "how to set up the local environment" runbook hasn't been opened since the new hire opened it.** Documentation that's only read, never written, is documentation that's wrong.
+
+If you have three or more of these, the setup isn't slow because of hardware. It's slow because the workflow is uncodified.
+
+## 3. Why this happens (and keeps happening)
+
+The reasons are structural, not personal. A few:
+
+**The bootstrap was built for one developer.** Day zero of the project, one engineer wrote setup.sh. It worked for them. Every subsequent developer either followed it (and it almost worked) or didn't (and figured something out). The set of "how to get this working" forks across the team.
+
+**Documentation has no enforcement.** A wiki page is a write-once artifact unless someone is explicitly responsible for keeping it current. They're not. So it rots.
+
+**The team's process changed faster than the wiki.** Three services got renamed, two ports moved, one deploy pipeline got rewritten. None of those PRs included updates to the onboarding doc.
+
+**No one wants to be the "process person."** Updating the wiki feels low-status. Real engineering is shipping code. The wiki rots predictably as a result.
+
+The fix is to make the setup *itself* the documentation. If "how to onboard" is an executable, version-controlled artifact, the PR that changes the deploy process is the PR that changes the bootstrap. The wiki problem disappears not because someone finally maintained the wiki, but because there isn't a wiki anymore.
+
+## 4. The actual fix
+
+You're looking for these properties in whatever tool you pick:
+
+1. **Bootstrap lives in source control,** in a format you can review like code.
+2. **It's executable,** not prose — running it is the only way to know it works.
+3. **It's idempotent,** so re-running it after a partial failure isn't scary.
+4. **It works the same across macOS / Linux / Windows,** because your team has all three.
+5. **It's the same artifact CI uses,** so drift between local and CI is impossible.
+6. **It knows about every repo,** not just the one it lives in.
+
+Make + a script gets you 1, 2, 3, partially 4, sometimes 5, almost never 6. Taskfile/Just are similar — strictly better than a shell script, but not great at the multi-repo case. The shape that nails all six is a *declarative multi-repo orchestrator*.
+
+The specific tool matters less than the shape. The shape is what kills the onboarding tax.
+
+## 5. What this looks like in practice
+
+A team that has the shape right has an onboarding sequence that fits on a postcard:
+
+```bash
+# Day one, 9am
+brew install <team-tool>            # or curl ... | sh on Linux
+<team-tool> add <team-config>       # registers the team profile
+<team-tool> install                 # clones everything, runs install
+<team-tool> env local               # sets the env across every repo
+<team-tool> test                    # runs the team's test command
+```
+
+If you can produce a sequence like that for your team, you've fixed it. The exact tool — I built [Raid](https://github.com/8bitAlex/raid) for this; you might prefer something else — is detail.
+
+If you can't, the next step is figuring out which property above is missing. You can usually nail it down in one afternoon of walking the latest new hire's onboarding with them.
+
+## 6. What to push back on
+
+A few things that look like fixes but aren't:
+
+- **"Let's buy everyone M4 MacBooks."** Hardware doesn't fix coordination. (Get good hardware anyway — but for the right reason.)
+- **"Let's rewrite the wiki."** The wiki rots again in three months. The artifact that doesn't rot is executable and reviewed.
+- **"Let's hire a DevEx engineer."** A person can hold the system together for a while. But unless they ship a *tool* the team uses, the toil comes back when they leave.
+- **"Let's move to a monorepo."** Sometimes the right answer; usually not. See [How to manage multiple repositories without losing your mind](/blog/how-to-manage-multiple-repositories) for when it actually applies.
+
+The cheapest fix is changing where the bootstrap *lives*, not what it's written in. Move it from wiki + scripts + tribal knowledge into a single version-controlled artifact and the slowness mostly goes away.
+
+## 7. The case to make to your team
+
+If you're trying to get buy-in for fixing this, the numbers are usually compelling:
+
+- Two days of onboarding × four new hires per quarter × $80/hr ≈ **$5,000 of new-hire time per quarter.**
+- Add the senior engineers debugging it (an hour each on average) ≈ **another $2,000+.**
+- Multiply by N quarters until somebody fixes it.
+
+Most fixes pay for themselves before the next new hire starts.
+
+## Next steps
+
+- [How to Onboard a New Developer in Under an Hour](/blog/how-to-onboard-a-new-developer-fast) — the concrete target.
+- [How to Stop Maintaining a 50-Line Bash Setup Script](/blog/how-to-stop-maintaining-a-50-line-bash-setup-script) — the specific artifact most teams need to retire.
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader category this fits inside.

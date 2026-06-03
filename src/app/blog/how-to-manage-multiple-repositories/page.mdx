@@ -1,0 +1,197 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Manage Multiple Repositories Without Losing Your Mind',
+  description:
+    'Multi-repo (polyrepo) development gets a bad reputation it doesn\'t deserve. The problem isn\'t the repos — it\'s the lack of a layer above them. Here\'s the layer.',
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'multi-repo', 'polyrepo', 'multiple repositories', 'managing many repositories',
+    'monorepo alternative', 'developer experience', 'devex', 'multi-repo orchestration'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-manage-multiple-repositories' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Multi-repo development gets blamed for a lot of problems it doesn't actually cause. Slow onboarding, drift between services, inconsistent tooling — these aren't symptoms of *having* many repos. They're symptoms of having no layer that knows about all of them at once.
+
+This post is about what that layer is, what it should do, and why the monorepo-vs-polyrepo debate misses the point.
+
+## 1. What multi-repo is bad at
+
+The honest list:
+
+- **No single command to clone everything.** You're chasing a wiki for which repos to pull.
+- **Per-project task runners don't compose.** `make build` in repo A and `task build` in repo B and a Compose file in repo C.
+- **Environment switching is N commands, not one.** Each repo has its own `.env`; switching to staging means editing all of them.
+- **Cross-repo refactors are expensive.** Search-replace across N working copies, N PRs, N reviews.
+- **Onboarding takes forever.** New hires walk a wiki for a day to set up a local environment that worked on day zero of the codebase.
+
+Real problems. Worth taking seriously.
+
+## 2. What monorepos are *also* bad at
+
+The teams that switch to a monorepo to fix the above often discover a new set of problems:
+
+- **Build tooling becomes a research project.** Bazel, Pants, Nx — each has a learning curve measured in months.
+- **Per-team autonomy decreases.** Everyone is now coupled to the build graph, the CI pipeline, the release cadence.
+- **CI gets expensive.** Naive setups rebuild the world on every change; sophisticated setups require sophisticated remote-cache infrastructure.
+- **Permissions get awkward.** Open-sourcing one component, granting a contractor access to one service, splitting off an experimental project — all harder.
+- **History rewrites get scary.** When the repo is 20 million lines, even routine operations get heavy.
+
+Both shapes have real trade-offs. The "monorepo solves everything" pitch is overblown, and the "polyrepo is a mess" pitch is too.
+
+## 3. What's actually missing in most polyrepo setups
+
+The polyrepo problems above share a common ancestor: **there's no tool that holds the team's mental model of "all our repos and how they work together."** Each repo has its own README, its own Makefile, its own bootstrap script. The team-level view exists only in people's heads.
+
+The fix isn't to switch to a monorepo. It's to add the missing layer.
+
+You want a tool that:
+
+1. Knows the **list of repositories** your team works on, where each one lives on disk, and how to clone each.
+2. Defines **named environments** (local / staging / production) that apply across every repo at once.
+3. Exposes **commands** that work no matter which repo you're standing in — `team test`, `team deploy`, `team format`.
+4. **Merges per-repo configuration** (commands and env that are specific to one service) with the team-level configuration above.
+5. Lives **in version control** as plain config, not as someone's bash script.
+
+That's the gap. Fill it and almost every polyrepo complaint goes away.
+
+## 4. What the team-level layer looks like
+
+Concretely, the layer is a YAML file that describes the system:
+
+```yaml
+name: web-platform
+repositories:
+  - { name: frontend, path: ~/Developer/frontend, url: https://github.com/acme/frontend.git }
+  - { name: api,      path: ~/Developer/api,      url: https://github.com/acme/api.git }
+  - { name: worker,   path: ~/Developer/worker,   url: https://github.com/acme/worker.git }
+
+environments:
+  - name: local
+    variables:
+      - { name: API_URL, value: http://localhost:8080 }
+  - name: staging
+    variables:
+      - { name: API_URL, value: https://api.staging.acme.com }
+
+commands:
+  - name: format
+    tasks:
+      - { type: Shell, cmd: make format, path: ~/Developer/frontend, concurrent: true }
+      - { type: Shell, cmd: make format, path: ~/Developer/api,      concurrent: true }
+      - { type: Shell, cmd: make format, path: ~/Developer/worker }
+```
+
+That's a definition of the team's whole environment. From it, a tool can:
+
+- Clone every repo in one command.
+- Switch every repo's environment with one command.
+- Run cross-repo commands in parallel.
+- Tell a new hire what commands exist (`tool --help`).
+- Tell an AI agent what the workspace looks like.
+
+Each repo can still have its own `Makefile`, its own `Taskfile.yml`, its own `package.json`. The team-level layer doesn't replace per-project tooling — it sits above it.
+
+## 5. Per-repo overrides
+
+The other half of the model is that each repo can commit its own configuration file alongside the code. That's where repo-specific commands and environment overrides live:
+
+```yaml
+# inside frontend/raid.yaml
+name: frontend
+commands:
+  - { name: dev, tasks: [{ type: Shell, cmd: npm run dev }] }
+environments:
+  - { name: local, variables: [{ name: PORT, value: '3000' }] }
+```
+
+The team-level profile gives every repo `API_URL`. The frontend's `raid.yaml` adds `PORT=3000` on top — visible only inside that repo, but managed by the same tool.
+
+The split works because:
+- **Team-level stuff scales horizontally.** Adding a new repo is one entry in the profile.
+- **Repo-level stuff stays local.** A change to one service's commands only touches that service's `raid.yaml`.
+- **Both live in source control.** The PR that introduces a new command is the same one that documents and ships it.
+
+## 6. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this model: a YAML profile at the team level, a `raid.yaml` in each repo, a CLI that merges them at runtime. The team's workflow becomes:
+
+```bash
+raid install       # clone every repo + run install tasks
+raid env staging   # swap every .env, run env tasks
+raid test          # run the team's test command across the right repos
+raid deploy        # run the team's deploy command
+```
+
+That's not specific to Raid — pick any tool that fits the shape above. The point is that multi-repo development is fine *once you stop treating the repos as the unit of organization* and start treating the team's workflow as the unit. The repos are an implementation detail.
+
+## 7. When to actually go monorepo
+
+To be fair: there are real cases where a monorepo is the right answer. If you have:
+
+- Frequent cross-repo refactors that benefit from atomic commits.
+- A small enough codebase that build tooling stays simple.
+- A homogeneous tech stack (all Go, all JS) where one build tool can own everything.
+
+…then a monorepo can save you real time. The decision is engineering taste, not a moral one. But the choice should be informed by *what problem you're actually trying to solve*. Most "we should go monorepo" arguments are really "our multi-repo workflow has no team-level layer" — and the team-level layer is a much cheaper fix.
+
+## Next steps
+
+- [Monorepo vs Polyrepo: A Third Option for the Developer Experience](/blog/monorepo-vs-polyrepo-a-third-option) — the longer version of the debate framing.
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader problem this fits inside.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — concrete first step if Raid sounds like the right shape.

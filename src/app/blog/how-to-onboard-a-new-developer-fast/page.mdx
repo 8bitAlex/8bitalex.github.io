@@ -1,0 +1,173 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Onboard a New Developer in Under an Hour',
+  description:
+    'Most engineering onboarding takes days. It doesn\'t have to. Here\'s the shape of an onboarding flow where a new hire is running the stack and making commits the same morning.',
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'developer onboarding', 'engineering onboarding', 'new hire onboarding',
+    'onboarding checklist', 'time to first commit', 'developer experience',
+    'devex', 'team productivity'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-onboard-a-new-developer-fast' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+There's a number you can use to grade your engineering team's developer experience: **time to first commit**. How long from "laptop opened on day one" to "first PR merged"? Most teams report somewhere between two days and two weeks. Most teams could honestly hit one hour. The gap is almost entirely process, not engineering.
+
+This post is about closing that gap — what a sub-hour onboarding looks like, why most teams fall short, and the architectural decisions that make the difference.
+
+## 1. Why onboarding takes so long
+
+Walk through the typical first-day arc on a multi-repo team:
+
+1. Install local tooling (homebrew packages, language toolchains, Docker).
+2. Clone 5–10 repos from the team.
+3. Read a wiki to learn the bootstrap order.
+4. Run setup scripts that may or may not still work.
+5. Edit `.env` files in each repo to match the local environment.
+6. Start backing services (Postgres, Redis, the message bus).
+7. Run migrations and seed data.
+8. Figure out which command starts the dev server in each repo.
+9. Read the README of the repo you're about to work in.
+10. Find the issue you're assigned and start coding.
+
+If everything works on the first try, that's maybe four hours. Anything wrong with step 3, 4, 5, 6, or 7 — and there usually is — and you're easily into day two or three. Multiply by the number of new hires per quarter.
+
+The waste compounds. Two engineers will be tied up walking them through the script that broke. The wiki page gets a tiny edit that someone else will trip over later. The bootstrap becomes more fragile, not less.
+
+## 2. What a fast onboarding actually looks like
+
+The end state is short:
+
+```
+09:00  laptop open, IDE installed
+09:05  install the team CLI tool
+09:10  add the team profile / clone all repos
+09:25  bootstrap finishes; local environment is up
+09:30  walk through the codebase with a buddy for context
+10:00  first PR merged
+```
+
+The technical part is twenty-five minutes. The remaining time is the social part — meeting the team, getting context — which is the part that actually deserves the hours.
+
+The shape of that flow has three properties worth naming:
+
+- **One command per step.** Not "install X, then Y, then run script Z." One command does the entire bootstrap.
+- **No wikis in the critical path.** The instructions are an executable artifact, not a document. If the artifact's wrong, the next install fails loudly — which gets it fixed.
+- **The same flow runs in CI.** Whatever bootstraps the new hire's laptop is the same thing CI runs. Drift between local and CI is impossible by construction.
+
+## 3. What's actually in the way
+
+The reasons most teams' onboarding takes two days reduce to a small set of root causes:
+
+**The bootstrap lives in tribal knowledge.** "Talk to Sarah, she'll get you set up" is a code smell. It means the system is in a person, not in code.
+
+**Per-project tooling doesn't compose.** `make build` in repo A and `task build` in repo B and a Compose file in repo C means three things to learn before you can run the stack.
+
+**Environments are configured by hand.** Each repo's `.env` is hand-edited. Each new repo adds another step the bootstrap needs to remember.
+
+**The fix is a one-off script.** Someone wrote `setup.sh` on their machine. It works on their machine. It will continue to work, until it doesn't, and then it will rot quietly.
+
+None of these are individually catastrophic. Together they make a two-hour problem into a two-day problem.
+
+## 4. The architectural pieces of a one-hour onboarding
+
+What you're really building is a **runnable definition of the developer environment**. The pieces:
+
+1. **A version-controlled file describing the environment.** Which repos exist, where they live on disk, what environments are supported, what commands the team uses. Plain YAML works; the format matters less than the property of being a single source of truth.
+2. **A single tool that reads it.** Installs in one command, idempotent, the same on every developer's machine. Probably a Go binary or a static install script — anything that doesn't drag in language-version drama.
+3. **One bootstrap command** that clones every repo and runs each repo's install steps in the right order.
+4. **One environment-switch command** that writes per-repo `.env` files and runs any setup tasks for that environment.
+5. **First-class commands** so the team's commands (`team test`, `team deploy`) are discoverable in `--help`, not scattered across READMEs.
+
+That's the architecture. It's not exotic; it's just a discipline.
+
+## 5. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) around exactly this shape — it's a CLI that reads a YAML profile defining your team's repos, environments, and commands. The bootstrap flow is the five commands above:
+
+```bash
+brew install 8bitalex/tap/raid
+raid profile add git@github.com:acme/raid-profiles.git
+raid install
+raid env local
+raid test
+```
+
+That's a sub-hour onboarding on a real multi-repo stack. The same commands work in CI, so the bootstrap that produced the new hire's local environment is the same one CI runs every PR.
+
+The point isn't that you have to use Raid. The point is that whatever tool you pick, the *shape* — one declarative file, one tool, one bootstrap command, one env switch — is what gets you under an hour. Everything else is detail.
+
+## 6. What to measure
+
+Two numbers tell you whether you've actually closed the gap:
+
+- **Time to first commit.** Start the clock when the laptop opens. Stop it when their first PR is merged. Most teams have never measured this; almost everyone is shocked by the actual number.
+- **Onboarding questions per new hire.** Count the Slack DMs your senior engineers get from a new hire in week one. If it's high, your "executable bootstrap" isn't actually executable end-to-end. Fix the gaps.
+
+## 7. The follow-on effect
+
+The hidden benefit isn't only for new hires. Every existing engineer who switches machines, blows away their environment because something broke, or pulls down a service they haven't touched in a year goes through the same flow. A one-hour onboarding for new hires is also a one-hour "rebuild my dev environment" for everyone.
+
+That's the part you actually feel quarter over quarter.
+
+## Next steps
+
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader problem this fits inside.
+- [How to Clone All Your Team's Repos with `raid install`](/blog/how-to-clone-all-your-team-repos-with-raid-install) — the bootstrap command in detail.
+- [How to Share a Raid Profile with Your Team](/blog/how-to-share-a-raid-profile-with-your-team) — distributing the profile so the onboarding flow above works.

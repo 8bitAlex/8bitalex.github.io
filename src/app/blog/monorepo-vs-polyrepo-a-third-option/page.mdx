@@ -1,0 +1,184 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'Monorepo vs Polyrepo: A Third Option for the Developer Experience',
+  description:
+    "The monorepo-vs-polyrepo debate frames the wrong axis. Most teams don't actually need to pick — they need a layer above their repos that handles team-level orchestration.",
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'monorepo vs polyrepo', 'monorepo', 'polyrepo', 'multi-repo',
+    'monorepo alternative', 'codebase architecture', 'developer experience',
+    'nx', 'bazel', 'turborepo'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/monorepo-vs-polyrepo-a-third-option' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+The monorepo-vs-polyrepo debate has been running for a decade. By now most teams have an instinct about which side they're on, and both sides are wrong in interesting ways.
+
+The actual question isn't *how many repos do we have*. It's *how does our developer experience scale with the number of services we run*. And it turns out that question can be answered well in either repo shape — if you do one specific thing.
+
+This post is about that specific thing.
+
+## 1. The debate as it's usually framed
+
+The standard pros and cons, briefly:
+
+**Monorepo wins on:** atomic cross-cutting changes, easy shared code, uniform tooling, "everything builds together."
+**Monorepo loses on:** build-tool complexity (Bazel/Pants/Nx have real learning curves), CI cost (clever caching or expensive rebuilds), per-team autonomy, history rewrites at scale.
+
+**Polyrepo wins on:** independence between teams, smaller blast radius for changes, simpler per-project tooling, easier open-sourcing.
+**Polyrepo loses on:** coordinating changes across services, harder onboarding (multiple repos to clone, multiple `.env` files), "wait, which command starts the API in this one?"
+
+Both lists are real. Both shapes are workable. Most teams pick based on which set of pains they've felt most recently. Then they spend a year discovering the other set.
+
+## 2. The thing both shapes need
+
+Squint at the polyrepo pain list. Almost every entry is some flavor of: **there's no single tool that knows about all the services at once**. Onboarding is hard because no tool clones everything. Switching environments is hard because no tool edits every `.env`. Running commands is hard because no tool knows which repo to run them in.
+
+Now squint at the monorepo wins. Atomic cross-cutting changes? Uniform tooling? "Everything builds together"? Those are the *byproducts* of having a single thing that knows about all the code at once. The thing happens to be a giant repo, but the *property* — one tool, whole-system view — is what's actually doing the work.
+
+The third option is to **get the property without the giant repo**: a tool that knows about all your services, lives at the team level, and works whether your code is in one repo or twenty.
+
+## 3. What that looks like
+
+The tool is small. It reads a YAML file that lists your services, where each lives, what environments are supported, and what commands the team runs:
+
+```yaml
+name: web-platform
+repositories:
+  - { name: frontend, path: ~/Developer/frontend, url: https://github.com/acme/frontend.git }
+  - { name: api,      path: ~/Developer/api,      url: https://github.com/acme/api.git }
+  - { name: worker,   path: ~/Developer/worker,   url: https://github.com/acme/worker.git }
+
+environments:
+  - name: local
+    variables: [{ name: API_URL, value: http://localhost:8080 }]
+  - name: staging
+    variables: [{ name: API_URL, value: https://api.staging.acme.com }]
+
+commands:
+  - name: test
+    tasks:
+      - { type: Shell, cmd: npm test, path: ~/Developer/frontend, concurrent: true }
+      - { type: Shell, cmd: go test ./..., path: ~/Developer/api, concurrent: true }
+```
+
+From there, the team-level operations work the way they would in a monorepo:
+
+```bash
+team install    # clones everything, runs install steps
+team env local  # writes .env to every repo
+team test       # runs the test command across services in parallel
+team deploy     # one deploy command, however the team defines it
+```
+
+Each repo can still have its own `package.json` / `go.mod` / `Cargo.toml`. Each repo can still own its own release cadence. Each repo still has its own CI. The polyrepo *autonomy* survives. The monorepo *team-level operations* show up anyway.
+
+## 4. Why this works
+
+The reason both shapes feel painful is the same: the *unit of organization* is the repo, but the *unit of work* is usually the team. When the units don't match, you get coordination overhead — meetings, wikis, scripts, tribal knowledge.
+
+A team-level orchestrator changes the unit of organization to the *team's workspace*. The repos become an implementation detail. You can have one of them, you can have twenty, the operations look the same from the outside.
+
+The monorepo is one way to achieve this. It collapses the implementation detail to a single repo, at the cost of needing serious build tooling. The team-level orchestrator is another way: it leaves the repos alone and adds a thin coordination layer.
+
+For most teams the orchestrator is cheaper. You're not rewriting your build system. You're not migrating millions of lines of history. You're adding one YAML file and one CLI.
+
+## 5. When the monorepo is actually right
+
+To be fair: monorepos do solve some problems orchestrators can't.
+
+- **Truly atomic cross-cutting refactors.** If you rename a function across 50 services, one PR in a monorepo beats 50 PRs across separate repos.
+- **Tight shared-code coupling.** Internal libraries used by every service can avoid the publish-version-update dance.
+- **Strict commit ordering across services.** "The API change goes live with the frontend change" is structurally guaranteed.
+
+If these are the *main* problems you have, a monorepo with mature build tooling is probably the right answer. Be honest about whether they're your main problems — most teams discover their main problems were really about coordination overhead, which the orchestrator fixes more cheaply.
+
+## 6. When polyrepo is actually right
+
+The opposite case:
+
+- **Independent release cadences across teams.** Each team owns when their service ships.
+- **Different tech stacks per service.** Go here, TypeScript there, Rust over there — no single build system fits all of them.
+- **Open-sourcing some services.** Hard to do from inside a monorepo.
+- **Permissions per service.** Some teams have access to some services and not others.
+
+These are situations where the monorepo's collapse-everything-to-one-repo doesn't help, and the polyrepo's independence is structurally useful. Add a team-level orchestrator and you keep all of that *and* get the team-level operations.
+
+## 7. The honest selection process
+
+If you're trying to make the call, the question to start with is **what specific pain are you trying to solve?**
+
+- "Onboarding takes too long" → orchestrator.
+- "Env switching is N commands" → orchestrator.
+- "Cross-repo refactors are expensive" → monorepo *might* be right, but verify by counting how many cross-repo refactors you actually do.
+- "Different teams can't move at their own speed" → polyrepo + orchestrator.
+- "Our build tooling per service is great, our team coordination is bad" → orchestrator over your existing polyrepo.
+
+The number of teams that genuinely need the *commit-level atomicity* of a monorepo is small. The number of teams that would benefit from team-level operations over their repos is large. Pick honestly.
+
+## 8. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) as the team-level orchestrator for polyrepo setups. The full how-to is in the [Raid tutorial series](/blog/tags/raid). The point isn't that you have to use Raid — it's that the *shape* (small CLI, YAML profile, team-level operations) is the third option that the monorepo-vs-polyrepo debate has been missing.
+
+You don't have to pick. You can have small repos, autonomous teams, and team-level operations all at once.
+
+## Next steps
+
+- [How to Manage Multiple Repositories Without Losing Your Mind](/blog/how-to-manage-multiple-repositories) — the polyrepo pain list in detail.
+- [How to Eliminate Developer Toil on a Multi-Repo Team](/blog/how-to-eliminate-developer-toil) — the broader picture this fits inside.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — concrete first step if the orchestrator shape sounds right.

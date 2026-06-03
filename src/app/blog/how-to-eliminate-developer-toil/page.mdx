@@ -1,0 +1,153 @@
+import { BlogPost } from '@/lib/mdx.ts'
+import { faGears } from '@fortawesome/free-solid-svg-icons'
+
+export const post = {
+  ...BlogPost,
+  type: 'Article',
+  icon: faGears,
+  date: '2026-06-03',
+  title: 'How to Eliminate Developer Toil on a Multi-Repo Team',
+  description:
+    "Developer toil — the manual setup, the stale wiki, the \"what's the command for that again?\" Slack thread — is fixable. Here's how to cut it systematically.",
+  tags: ['Developer Experience', 'Raid']
+}
+
+export const metadata = {
+  title: post.title,
+  description: post.description,
+  keywords: [
+    'developer toil', 'reduce developer toil', 'eliminate toil',
+    'engineering toil', 'developer experience', 'devex',
+    'multi-repo', 'team productivity', 'developer tooling'
+  ],
+  alternates: { canonical: 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil' },
+  openGraph: {
+    type: 'article',
+    url: 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil',
+    title: post.title,
+    description: post.description,
+    siteName: 'Alex Salerno',
+    publishedTime: post.date,
+    authors: [post.author.name],
+    tags: post.tags
+  },
+  twitter: { card: 'summary_large_image', title: post.title, description: post.description }
+}
+
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Article',
+          '@id': 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil#article',
+          headline: post.title,
+          description: post.description,
+          datePublished: post.date,
+          dateModified: post.date,
+          inLanguage: 'en',
+          url: 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil',
+          mainEntityOfPage: { '@type': 'WebPage', '@id': 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil' },
+          author: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          publisher: { '@type': 'Person', name: post.author.name, url: 'https://www.alexsalerno.dev' },
+          articleSection: 'Developer Experience'
+        },
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.alexsalerno.dev' },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.alexsalerno.dev/blog' },
+            { '@type': 'ListItem', position: 3, name: post.title, item: 'https://www.alexsalerno.dev/blog/how-to-eliminate-developer-toil' }
+          ]
+        }
+      ]
+    })
+  }}
+/>
+
+Developer toil is the work that doesn't make the product better. It's the morning rebooting docker. It's the "which port was the auth service on again?" Slack thread. It's the wiki page from 2023 that *almost* works. It's the senior engineer who has to walk every new hire through the same bootstrap. It compounds quietly — nobody calls it out as a fire, but it eats a measurable percentage of every sprint.
+
+This post is about how to fix it systematically — not via heroics, but by changing where the knowledge lives.
+
+## 1. What "toil" actually is
+
+Google's SRE book defined toil as work that's manual, repetitive, automatable, tactical, and devoid of enduring value. The same definition works for developers. A useful question: *if I quit tomorrow, would this work disappear or would the next person do it again?* If they'd do it again, it's toil.
+
+Concrete examples that show up on most multi-repo teams:
+
+- **Onboarding rituals** — clone 7 repos, follow a wiki, run a 50-line bash script, ping someone when step 4 fails because the script hasn't been updated since the prod URL changed.
+- **Environment switching** — edit `.env` files in each repo, restart the right docker services, hope the API URL got updated everywhere.
+- **Command memorization** — `npm run build` here, `make build` there, `task build` over in the new service, `just build` in the experimental one.
+- **The "actual" way to start the proxy** — exists in a Slack thread, last referenced six months ago.
+
+Each is small. Each happens hundreds of times per quarter across the team. That's the cost.
+
+## 2. Why the usual fixes don't stick
+
+Most teams have tried at least one of the following:
+
+**Wikis and READMEs.** They go stale within weeks. Nothing forces them to stay accurate, and nothing catches the drift. The fastest way to know your wiki is out of date is to onboard a new hire and watch them get stuck.
+
+**Bootstrap scripts.** Better than wikis — at least they're executable — but they live on one person's machine, drift when the process changes, and silently break in ways nobody notices until the next install. The script becomes its own toil.
+
+**Per-project task runners.** `Makefile` / `Taskfile.yml` / `justfile` solve a real problem (commands that live with the code) but only inside a single repo. As soon as your environment spans multiple repos, they don't compose.
+
+**Heroic seniors.** "Just ask Sarah." Sarah is the system. Sarah leaves.
+
+All of these are partial fixes because the *knowledge isn't versioned with the code*. It's somewhere else — a wiki, a shell history, a Slack thread, a brain.
+
+## 3. The shape of a real fix
+
+Pick a tool whose job is to keep developer commands and environments **co-located with the code, in version control, executable, and the same on every developer's machine**. That's it. Whatever you pick should satisfy:
+
+1. **One command per task.** `team test`, `team deploy`, `team env staging` — not `cd ../api && npm test && cd ../web && npm test`.
+2. **The command lives in the repo.** When the process changes, the command changes with it, in the same PR.
+3. **It works across repos.** The hard problems are at the team level, not the project level — your tool needs to know about more than one repo.
+4. **Environments are first-class.** Switching between local / staging / production should be one command, applied across every repo.
+5. **It runs the same in CI.** The thing your developers run locally is the same thing CI runs. Different invocations of the same intent are toil.
+
+The list narrows the field quickly. Most per-project task runners fail on criterion 3. Most "one-script-to-rule-them-all" approaches fail on criterion 1 (because the script grows arbitrary flags). The shape you're looking for is a *declarative, multi-repo orchestrator*.
+
+## 4. What this looks like in practice
+
+I built [Raid](https://github.com/8bitAlex/raid) for exactly this. It's a small CLI that reads a YAML profile defining your team's repos, environments, and commands. The day-one onboarding flow collapses to:
+
+```bash
+brew install 8bitalex/tap/raid
+raid profile add git@github.com:acme/raid-profiles.git
+raid install                         # clones every repo, runs bootstrap
+raid env local                       # writes .env files to every repo
+raid test                            # runs the test command the team defines
+```
+
+Five commands and the new hire is running the stack. The same commands work in CI with `--headless`. When the deploy process changes, someone edits the profile in a PR — the next time the team pulls, the new behavior is just there. There's no script to maintain on one person's laptop, no wiki to rot.
+
+The mechanism isn't magic. It's that the team's workflow becomes a *versioned, reviewed, executable artifact* instead of tribal knowledge. The toil disappears because the work it represented no longer needs to happen.
+
+## 5. Three concrete moves you can make this week
+
+You don't need to adopt anything specific to start cutting toil. Three changes that pay off independently:
+
+1. **Pick one piece of tribal knowledge and check it in.** The single Slack thread everyone references. Make it a `runbook.md` in the repo, or a Taskfile recipe, or a `raid.yaml` command. Force it to live where it's reviewable.
+
+2. **Make environment switching one command.** Whatever you pick, the bar is "one command swaps every repo's `.env` and restarts the right services." If switching to staging takes more than that, fix it before doing anything else.
+
+3. **Run the next new hire through the docs without helping them.** Sit on your hands. Note every place they get stuck. Each one is toil — the wiki is wrong, the script needs an env var, the service no longer runs on port 8080. Fix the *thing*, not the wiki.
+
+## 6. Measuring whether it worked
+
+Toil is famously hard to measure, but two signals are cheap:
+
+- **Time to first commit for a new hire.** Track it. A team with sustained toil will see this number drift up over time; a team that's cut toil will see it drop and stay there.
+- **Slack questions per onboarding.** "How do I…" questions are explicit, countable signals. Drops there correlate directly with time you don't have to spend.
+
+You don't need a dashboard. You just need to notice.
+
+## Next steps
+
+- [How to Onboard a New Developer in Under an Hour](/blog/how-to-onboard-a-new-developer-fast) — the most expensive form of toil, fixed end-to-end.
+- [How to Manage Multiple Repositories Without Losing Your Mind](/blog/how-to-manage-multiple-repositories) — the multi-repo problem in detail.
+- [How to Stop Maintaining a 50-Line Bash Setup Script](/blog/how-to-stop-maintaining-a-50-line-bash-setup-script) — the specific anti-pattern most teams have.
+- [How to Create a Raid Profile](/blog/how-to-create-a-raid-profile) — if Raid sounds like the right fit, this is the first step.
