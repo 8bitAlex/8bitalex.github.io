@@ -53,8 +53,14 @@ describe('FeaturedPosts', () => {
 
   it('post article links to post href', () => {
     render(<FeaturedPosts posts={[makePost({ href: '/blog/my-post' })]} />)
-    const link = screen.getByRole('link')
-    expect(link).toHaveAttribute('href', '/blog/my-post')
+    const link = screen.getAllByRole('link').find((a) => a.getAttribute('href') === '/blog/my-post')
+    expect(link).toBeDefined()
+  })
+
+  it('renders "See all posts" CTA linking to /blog', () => {
+    render(<FeaturedPosts posts={[makePost()]} />)
+    const cta = screen.getByRole('link', { name: /see all posts/i })
+    expect(cta).toHaveAttribute('href', '/blog')
   })
 
   it('renders 2 posts with lg:grid-cols-2 layout', () => {
