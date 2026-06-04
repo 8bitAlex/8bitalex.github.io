@@ -9,7 +9,10 @@ function PageView() {
   const posthog = usePostHog()
 
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return
+    // Don't gate on NEXT_PUBLIC_POSTHOG_KEY — it isn't reliably set under
+    // next-on-pages builds (see providers.tsx for why the key is hardcoded).
+    // `!posthog` is the real guard: if init didn't happen there's nothing
+    // to capture against.
     if (!pathname || !posthog) return
     posthog.capture('$pageview', { $current_url: window.origin + pathname })
   }, [pathname, posthog])
