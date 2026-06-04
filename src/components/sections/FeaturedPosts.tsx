@@ -1,3 +1,4 @@
+import { Button } from '@/components/Button'
 import { FadeIn, FadeInStagger } from '@/components/FadeIn'
 import Section from '@/components/layout/Section'
 import { MDXEntry, Post } from '@/lib/mdx'
@@ -42,6 +43,9 @@ export default function FeaturedPosts({ posts }: { posts: Array<MDXEntry<Post>> 
             </FadeIn>
           ))}
         </FadeInStagger>
+        <FadeIn className="mt-12 flex justify-center">
+          <Button href="/blog">See all posts</Button>
+        </FadeIn>
       </Section>
       <QuoteBanner author={{ name: 'Antoine de Saint-Exupéry' }} className="mt-8 mb-16">
         Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away.
