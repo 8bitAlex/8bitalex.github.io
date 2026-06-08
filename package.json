@@ -42,7 +42,7 @@
     "next": "^15.3.3",
     "posthog-js": "^1.374.2",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
