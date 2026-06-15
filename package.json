@@ -74,6 +74,6 @@
     "typescript": "^6",
     "unified-conditional": "0.0.2",
     "vitest": "^4.1.9",
-    "wrangler": "^4.90.0"
+    "wrangler": "^4.100.0"
   }
 }
