@@ -38,7 +38,7 @@
     "clsx": "^2.1.1",
     "escape-string-regexp": "^5.0.0",
     "fast-glob": "^3.3.3",
-    "framer-motion": "^12.39.0",
+    "framer-motion": "^12.40.0",
     "next": "^15.3.3",
     "posthog-js": "^1.374.2",
     "react": "^19.2.4",
