@@ -2,6 +2,7 @@ import { FadeIn } from '@/components/FadeIn'
 import { faMedal } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import imageAlex from '@public/img/alex-portrait.jpg'
+import xpApple from '@public/img/experience/apple-logo-white.svg'
 import xpArmy from '@public/img/experience/CA-Army-logo.webp'
 import xpIDT from '@public/img/experience/IDT-logo-border.png'
 import xpSpawar from '@public/img/experience/SPAWAR-logo-border.gif'
@@ -42,6 +43,8 @@ const skills = [
   ['API Frameworks', skillAPI],
   ['Agile Leadership', skillAgile]
 ]
+
+const currentExperience = ['Apple', xpApple]
 
 const experience = [
   ['Workday', xpWorkday],
@@ -91,7 +94,14 @@ export function AboutMe() {
         />
       </FadeIn>
       <ShowcaseList name="Skills & Technology" items={skills} className="mb-8 md:mt-22" wide />
-      <ShowcaseList name="Experience" items={experience} className="mb-8 md:mt-22" center height={128} />
+      <ShowcaseList
+        name="Experience"
+        featured={currentExperience}
+        items={experience}
+        className="mb-8 md:mt-22"
+        center
+        height={128}
+      />
       <TextGridList title="Values" items={values} invert className="mb-8 md:mt-22" />
     </div>
   )
