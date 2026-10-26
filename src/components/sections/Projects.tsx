@@ -1,11 +1,13 @@
 import { Border } from '@/components/Border'
 import { Button } from '@/components/Button'
-import { FadeIn } from '@/components/FadeIn'
+import { FadeIn, FadeInStagger } from '@/components/FadeIn'
 import { StylizedImage } from '@/components/StylizedImage'
 import { TagList, TagListItem } from '@/components/TagList'
 import { loadProjects, Project } from '@/lib/mdx'
+import Link from 'next/link'
 import React from 'react'
 import { QuoteBanner } from '../blocks/QuoteBanner'
+import { HeaderWithDivider } from '../blocks/TextHeaders'
 import Section from '../layout/Section'
 
 // Stable per-project slug derived from the project's href (/projects/<slug>).
@@ -13,6 +15,14 @@ import Section from '../layout/Section'
 // the quick-links row, so clicking a chip scrolls down to the project.
 function projectSlug(project: Project): string {
   return project.href.replace(/^\/projects\//, '').replace(/\/$/, '')
+}
+
+function ArrowIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
+  return (
+    <svg viewBox="0 0 24 6" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M24 3 18 .5v2H0v1h18v2L24 3Z" />
+    </svg>
+  )
 }
 
 function QuickLinks({ projects }: { projects: Project[] }) {
@@ -92,6 +102,29 @@ function ProjectDetails({
   )
 }
 
+// Compact row for projects that sit below the detailed ones. Keeps the anchor
+// id so the quick-links chips still resolve for every project in the section.
+function ProjectSummary({ project }: { project: Project }) {
+  return (
+    <li id={projectSlug(project)} className="scroll-mt-24">
+      <FadeIn>
+        <Border className="group relative pt-8">
+          <Link href={project.href} className="block">
+            <div className="flex items-baseline justify-between gap-x-8">
+              <h3 className="font-display text-xl font-medium tracking-tight text-neutral-950 transition group-hover:text-neutral-700">
+                {project.title}
+              </h3>
+              <ArrowIcon className="w-6 flex-none fill-neutral-950 transition group-hover:translate-x-2" />
+            </div>
+            <p className="mt-2 max-w-3xl text-base text-neutral-600">{project.description}</p>
+            <span className="absolute inset-0" />
+          </Link>
+        </Border>
+      </FadeIn>
+    </li>
+  )
+}
+
 function ProjectsList({ projects }: { projects: Project[] }) {
   return (
     <div className="mt-18 space-y-18 [counter-reset:section]">
@@ -104,8 +137,36 @@ function ProjectsList({ projects }: { projects: Project[] }) {
   )
 }
 
-export default async function ProjectSection() {
+function MoreProjects({ projects }: { projects: Project[] }) {
+  if (projects.length === 0) return null
+  return (
+    <div className="mt-18">
+      <FadeIn>
+        <HeaderWithDivider name="More Projects" />
+      </FadeIn>
+      <FadeInStagger faster>
+        <ul role="list" className="mt-10 space-y-10">
+          {projects.map((project) => (
+            <ProjectSummary key={project.title} project={project} />
+          ))}
+        </ul>
+      </FadeInStagger>
+    </div>
+  )
+}
+
+type Props = {
+  // Cap on how many projects get the full detail treatment (image, abstract,
+  // tags). Any beyond the cap render as compact rows underneath. Omit to
+  // detail every project, which is what the dedicated /projects page wants.
+  detailedCount?: number
+}
+
+export default async function ProjectSection({ detailedCount }: Props = {}) {
   const projects = (await loadProjects()).sort((a, b) => a.order - b.order)
+  const detailed = detailedCount === undefined ? projects : projects.slice(0, detailedCount)
+  const remaining = detailedCount === undefined ? [] : projects.slice(detailedCount)
+
   return (
     <div>
       <Section
@@ -113,7 +174,8 @@ export default async function ProjectSection() {
         title="A Curated Collection of My Projects and Related Documentation."
         description={<QuickLinks projects={projects} />}
       >
-        <ProjectsList projects={projects} />
+        <ProjectsList projects={detailed} />
+        <MoreProjects projects={remaining} />
       </Section>
       <QuoteBanner author={{ name: 'Guy Kawasaki' }}>Ideas are easy. Implementation is hard</QuoteBanner>
     </div>

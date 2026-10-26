@@ -19,9 +19,6 @@ export default async function ProjectLayout({
   const allProjects = await loadProjects()
   const moreProjects = allProjects.filter((someProject) => someProject.title !== project.title).slice(0, 2)
 
-  const startYear = project.startDate.split('-')[0]
-  const endYear = project.date.split('-')[0]
-
   return (
     <>
       <article className="mt-24 sm:mt-32 lg:mt-40">
@@ -47,34 +44,7 @@ export default async function ProjectLayout({
             </div>
           </PageIntro>
           <FadeIn>
-            <div className="mt-18 border-t border-neutral-200 bg-white/50 sm:mt-24 lg:mt-32">
-              <Container>
-                <div className="mx-auto max-w-5xl">
-                  <dl className="-mx-6 grid grid-cols-1 text-sm text-neutral-950 sm:mx-0 sm:grid-cols-3">
-                    <div className="border-t border-neutral-200 px-6 py-4 first:border-t-0 sm:border-t-0 sm:border-l">
-                      <dt className="font-semibold">Type</dt>
-                      <dd>{project.type}</dd>
-                    </div>
-                    <div className="border-t border-neutral-200 px-6 py-4 first:border-t-0 sm:border-t-0 sm:border-l">
-                      <dt className="font-semibold">Status</dt>
-                      <dd>{project.status}</dd>
-                    </div>
-                    <div className="border-t border-neutral-200 px-6 py-4 first:border-t-0 sm:border-t-0 sm:border-l">
-                      <dt className="font-semibold">Year{startYear != endYear && 's'}</dt>
-                      <dd>
-                        <time dateTime={startYear}>{startYear}</time>
-                        {startYear != endYear && (
-                          <>
-                            &nbsp;- <time dateTime={endYear}>{endYear}</time>
-                          </>
-                        )}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-              </Container>
-            </div>
-            <div className="border-y border-neutral-200 bg-neutral-100">
+            <div className="mt-18 border-y border-neutral-200 bg-neutral-100 sm:mt-24 lg:mt-32">
               <div className="mx-auto -my-px max-w-[76rem] bg-neutral-200">
                 <GrayscaleTransitionImage
                   src={project.image}
