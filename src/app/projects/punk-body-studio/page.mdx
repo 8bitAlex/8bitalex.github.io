@@ -1,0 +1,84 @@
+import image from './punk-body-studio.png'
+
+export const project = {
+  order: 2,
+  title: 'Punk//Body Studio',
+  description:
+    'A free Windows body editor for Cyberpunk 2077. Reshape V and NPC bodies with sliders in a live 3D preview, refit clothing and physics to the result, and deploy it all as a single removable mod.',
+  abstract: (
+    <div>
+      <p>
+        Punk//Body Studio is a Windows desktop application that reads the bodies and garments straight out of a
+        Cyberpunk 2077 install, lets you reshape them in a live 3D preview, and builds a mod the game loads like any
+        other.
+      </p>
+      <br />
+      <p>
+        More than 30 sliders across eight groups drive female V, male V, and 15 NPC body types. Whatever you shape, the
+        wardrobe follows: V&apos;s garments are refit so they stop clipping, optional breast, glute and cloth physics
+        are fitted to the new silhouette, and bodies from existing mods can be imported and edited like the game&apos;s
+        own.
+      </p>
+      <br />
+      <p>
+        The design constraint that shaped everything else: the game&apos;s files are never touched. Every build goes
+        into one archive you can delete, with a pre-deploy check that spots conflicting body mods rather than silently
+        fighting them.
+      </p>
+    </div>
+  ),
+  startDate: '2026-10-25',
+  date: '2026-10-26',
+  image: image,
+  href: '/projects/punk-body-studio',
+  website: 'https://body.punkstudio.org/',
+  status: 'v0.4.0 Preview',
+  type: 'Desktop Application',
+  tags: ['Desktop App', 'Windows', '3D', 'Game Modding', 'Freeware']
+}
+
+export const metadata = {
+  title: project.title,
+  description: project.description
+}
+
+Punk//Body Studio is a body editor for Cyberpunk 2077: shape V&apos;s and NPC bodies with sliders, refit your clothes to
+them, and install the result as a mod.
+
+## The Problem
+
+Changing a body in Cyberpunk 2077 normally means installing someone else&apos;s body mod and accepting their proportions
+wholesale. Anything beyond that is mesh work in Blender, and the moment the body changes, every garment has to be refit
+by hand or it clips straight through. Body mods also tend to overwrite the same game files, so two of them installed at
+once quietly fight each other.
+
+## The Solution
+
+Body Studio turns that into sliders. It reads the bodies and clothes from your own install, reshapes them live in a 3D
+preview, refits the wardrobe to whatever you shaped, and packs the lot into a single mod archive.
+
+## Key Features
+
+- **Slider-driven bodies**: 30+ sliders in eight groups for female V (all three character-creator breast sizes), male
+  V, and 15 NPC body types. Change one NPC body and every NPC wearing it changes with it.
+- **Clothes that actually fit**: V&apos;s garments are refit to the shaped body and packed into the same mod, covering the
+  base game, Phantom Liberty, and any clothing mods already installed.
+- **Physics**: optional breast, glute and cloth physics fitted to the shaped body, with per-axis intensity, previewed
+  on the game&apos;s own walk cycle.
+- **One-click deploy**: builds and installs to `archive\pc\mod` or as a REDmod, after checking for body mods that would
+  collide and offering to move them aside.
+- **Export**: bodies out as game meshes or glTF (`.glb`) for Blender, slider sets as shareable presets, and `.punk`
+  projects that keep every body and setting for later.
+- **Works with existing body mods**: imports bodies from archives such as VTK Vanilla HD, Hyst Angel and Hyst EBB, then
+  treats them like game bodies for sliders, refit and physics.
+- **Non-destructive by design**: the game&apos;s own files are never edited; everything lands in one removable archive.
+
+## Built With
+
+A Windows desktop app with a real-time 3D viewport, driving the WolvenKit command-line tool for game archive I/O. The
+installer pulls WolvenKit and a private .NET runtime from their official sources into its own folder, so nothing is
+installed system-wide and no administrator rights are needed. Seat of the whole thing is glTF: bodies round-trip through
+it, which is what makes Blender export fall out for free.
+
+Freeware rather than open source, distributed from the project site and Nexus Mods, with opt-in anonymous usage
+statistics that never include files, paths or slider values.
