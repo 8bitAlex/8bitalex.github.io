@@ -171,7 +171,7 @@ export default async function ProjectSection({ detailedCount }: Props = {}) {
     <div>
       <Section
         eyebrow="Projects"
-        title="A Curated Collection of My Projects and Related Documentation."
+        title="Curated collection of my projects"
         description={<QuickLinks projects={projects} />}
       >
         <ProjectsList projects={detailed} />
