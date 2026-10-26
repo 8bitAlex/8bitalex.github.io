@@ -2,7 +2,7 @@ import Projects from '@/components/sections/Projects'
 
 export const metadata = {
   title: 'Projects',
-  description: 'A Curated Collection of my Projects and Related Documentation.'
+  description: 'Curated collection of my projects'
 }
 
 export default function ProjectsPage() {
