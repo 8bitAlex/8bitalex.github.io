@@ -1,13 +1,13 @@
 import { Border } from '@/components/Border'
 import { Button } from '@/components/Button'
 import { FadeIn, FadeInStagger } from '@/components/FadeIn'
-import { GrayscaleTransitionImage } from '@/components/GrayscaleTransitionImage'
 import { Container } from '@/components/layout/Container'
 import { MDXComponents } from '@/components/MDXComponents'
 import { PageIntro } from '@/components/PageIntro'
 import { PageLinks } from '@/components/PageLinks'
 import { TagList, TagListItem } from '@/components/TagList'
 import { loadProjects, type MDXEntry, type Project } from '@/lib/mdx'
+import Image from 'next/image'
 
 export default async function ProjectLayout({
   project,
@@ -46,12 +46,7 @@ export default async function ProjectLayout({
           <FadeIn>
             <div className="mt-18 border-y border-neutral-200 bg-neutral-100 sm:mt-24 lg:mt-32">
               <div className="mx-auto -my-px max-w-[76rem] bg-neutral-200">
-                <GrayscaleTransitionImage
-                  src={project.image}
-                  quality={90}
-                  className="max-h-[80vh] object-cover"
-                  priority
-                />
+                <Image src={project.image} alt="" quality={90} className="max-h-[80vh] w-full object-cover" priority />
               </div>
             </div>
           </FadeIn>

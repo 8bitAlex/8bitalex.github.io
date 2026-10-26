@@ -30,7 +30,7 @@ export function StylizedImage({ shape = 0, className, ...props }: ImagePropsWith
     <div className={clsx(className, 'relative flex aspect-719/680 w-full')}>
       <svg viewBox={`0 0 ${width} ${height}`} fill="none" className="h-full">
         <g clipPath={`url(#${id}-clip)`} className="group">
-          <g className="origin-center scale-100 grayscale transition duration-500 hover:grayscale-75 motion-safe:group-hover:scale-105">
+          <g className="origin-center scale-100 transition duration-500 motion-safe:group-hover:scale-105">
             <foreignObject width={width} height={height}>
               <Image
                 alt=""
