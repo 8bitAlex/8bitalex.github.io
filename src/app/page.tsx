@@ -25,7 +25,7 @@ export default async function Home() {
 
       <FeaturedPosts posts={posts.slice(0, 3)} />
 
-      <Projects />
+      <Projects detailedCount={3} />
     </>
   )
 }
